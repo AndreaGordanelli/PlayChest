@@ -26,9 +26,7 @@ if [ -f "${appDir}/admin.js" ]; then
   cp "${appDir}/admin.js" "${htmlDir}/admin.js"
 fi
 
-if [ -f "${configPath}" ]; then
-  cp "${configPath}" "${htmlDir}/config.ini"
-fi
+rm -f "${htmlDir}/config.ini"
 
 export GAMECACHE_SYNC_STATUS_PATH="${dataDir}/sync-status.json"
 export GAMECACHE_APP_DIR="${appDir}"

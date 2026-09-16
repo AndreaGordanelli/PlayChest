@@ -104,23 +104,45 @@ async function refreshUsernames() {
   if (!list) return;
   try {
     const data = await fetchUsernames();
+    list.replaceChildren();
     if (!data.usernames.length) {
-      list.innerHTML = '<li class="admin-username-item">No usernames configured</li>';
+      const emptyItem = document.createElement('li');
+      emptyItem.className = 'admin-username-item';
+      emptyItem.textContent = 'No usernames configured';
+      list.appendChild(emptyItem);
       return;
     }
     const canRemove = data.usernames.length > 1;
-    list.innerHTML = data.usernames.map(username => {
+    data.usernames.forEach(username => {
+      const item = document.createElement('li');
+      item.className = 'admin-username-item';
+      const name = document.createElement('strong');
+      name.textContent = username;
+      item.appendChild(name);
       const fromConfig = data.configUsernames.some(
-        name => name.toLowerCase() === username.toLowerCase()
+        configName => configName.toLowerCase() === username.toLowerCase()
       );
-      const sourceLabel = fromConfig ? '<span>From config.ini</span>' : '';
-      const removeButton = canRemove
-        ? `<button type="button" class="secondary-btn" data-remove-username="${username}">Remove</button>`
-        : '';
-      return `<li class="admin-username-item"><strong>${username}</strong>${sourceLabel}${removeButton}</li>`;
-    }).join('');
+      if (fromConfig) {
+        const sourceLabel = document.createElement('span');
+        sourceLabel.textContent = 'From config.ini';
+        item.appendChild(sourceLabel);
+      }
+      if (canRemove) {
+        const removeButton = document.createElement('button');
+        removeButton.type = 'button';
+        removeButton.className = 'secondary-btn';
+        removeButton.dataset.removeUsername = username;
+        removeButton.textContent = 'Remove';
+        item.appendChild(removeButton);
+      }
+      list.appendChild(item);
+    });
   } catch (error) {
-    list.innerHTML = `<li class="admin-username-item">${error.message}</li>`;
+    list.replaceChildren();
+    const errorItem = document.createElement('li');
+    errorItem.className = 'admin-username-item';
+    errorItem.textContent = error.message;
+    list.appendChild(errorItem);
   }
 }
 

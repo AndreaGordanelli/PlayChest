@@ -187,7 +187,6 @@ def get_status_payload():
     payload["databaseReady"] = DB_PATH.exists() and DB_PATH.stat().st_size > 0
     payload["syncRunning"] = SYNC_RUNNING
     payload["notesCount"] = len(read_json(NOTES_PATH, {}))
-    payload["usernames"] = get_usernames_payload()["usernames"]
     return payload
 
 
@@ -354,6 +353,8 @@ class SyncApiHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/status":
+            if not self._requireAdmin():
+                return
             self._send_json(200, get_status_payload())
             return
 

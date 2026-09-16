@@ -1,4 +1,4 @@
-const cacheVersion = 'playchest-v9';
+const cacheVersion = 'playchest-v10';
 const shellCacheName = `${cacheVersion}-shell`;
 const dataCacheName = `${cacheVersion}-data`;
 const imageCacheName = `${cacheVersion}-images`;
@@ -13,7 +13,6 @@ const appShell = [
   './admin.html',
   './admin.js',
   './manifest.webmanifest',
-  './config.ini',
   './favicon.ico',
   './vendor/sql-wasm.js',
   './vendor/sql-wasm.wasm',

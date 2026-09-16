@@ -75,66 +75,30 @@ function createTagChipsContainer(chips) {
   return container.outerHTML;
 }
 
-// Core application functions
-function loadINI(path, callback) {
-  fetch(path)
-    .then(response => response.text())
-    .then(text => {
-      const config = {};
-      const lines = text.split('\n');
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        // Skip empty lines and comments
-        if (!trimmed || trimmed.startsWith('#')) continue;
-
-        // Parse key = value pairs
-        const equalIndex = trimmed.indexOf('=');
-        if (equalIndex > 0) {
-          const key = trimmed.substring(0, equalIndex).trim();
-          let value = trimmed.substring(equalIndex + 1).trim();
-
-          // Remove quotes if present
-          if ((value.startsWith('"') && value.endsWith('"')) ||
-              (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-          }
-
-          config[key] = value;
-        }
-      }
-
-      // Transform flat config into nested structure expected by the app
-      const settings = {
-        title: config.title || "PlayChest",
-        games_per_page: config.games_per_page,
-        bgg: {
-          username: config.bgg_username
-        }
-      };
-
-      callback(settings);
-    })
-    .catch(error => console.error('Error loading config:', error));
+function getDatabaseVersion(response) {
+  return response.headers.get('Last-Modified')
+    || response.headers.get('Content-Length')
+    || String(Date.now());
 }
 
 async function getDatabaseUrl() {
   try {
-    const status = await fetch('/api/status', { cache: 'no-store' }).then(response => response.json());
-    const version = encodeURIComponent(status.updatedAt || Date.now());
-    watchForCollectionUpdates(status.updatedAt);
+    const response = await fetch('./gamecache.sqlite.gz', { method: 'HEAD', cache: 'no-store' });
+    const version = encodeURIComponent(getDatabaseVersion(response));
+    watchForCollectionUpdates(version);
     return `./gamecache.sqlite.gz?v=${version}`;
   } catch (error) {
     return `./gamecache.sqlite.gz?v=${Date.now()}`;
   }
 }
 
-function watchForCollectionUpdates(currentUpdatedAt) {
-  if (!currentUpdatedAt) return;
+function watchForCollectionUpdates(currentVersion) {
+  if (!currentVersion) return;
   setInterval(async () => {
     try {
-      const status = await fetch('/api/status', { cache: 'no-store' }).then(response => response.json());
-      if (status.status === 'completed' && status.updatedAt && status.updatedAt !== currentUpdatedAt) {
+      const response = await fetch('./gamecache.sqlite.gz', { method: 'HEAD', cache: 'no-store' });
+      const version = encodeURIComponent(getDatabaseVersion(response));
+      if (version && version !== currentVersion) {
         showReloadBanner();
       }
     } catch (error) {
@@ -148,7 +112,7 @@ function showReloadBanner() {
   if (banner) banner.hidden = false;
 }
 
-async function initializeDatabase(settings) {
+async function initializeDatabase() {
   try {
     const SQL = await initSqlJs({
       locateFile: file => `./vendor/${file}`
@@ -1862,7 +1826,7 @@ function renderGameCard(game) {
 
   // Set description
   const teaserText = clone.querySelector('.teaser-text');
-  teaserText.setAttribute('data-full-text', escapeHtml(game.description || ''));
+  teaserText.setAttribute('data-full-text', game.description || '');
   teaserText.innerHTML = game.description ? getTeaserText(game.description, true) : 'No description available.';
 
   // Set mechanic chips
@@ -1989,24 +1953,25 @@ function formatPlayerCountShort(players) {
 function getTeaserText(description, hasMore = false) {
   if (!description) return '';
 
-  if (description.length <= MAX_DESCRIPTION_LENGTH) {
-    return description;
+  let displayText = description;
+  const needsMore = description.length > MAX_DESCRIPTION_LENGTH;
+  if (needsMore) {
+    displayText = description.substring(0, MAX_DESCRIPTION_LENGTH);
+    const lastSpace = displayText.lastIndexOf(' ');
+    if (lastSpace > 0) {
+      displayText = displayText.substring(0, lastSpace);
+    }
+    displayText += '...';
   }
 
-  let truncated = description.substring(0, MAX_DESCRIPTION_LENGTH);
-  const lastSpace = truncated.lastIndexOf(' ');
-  if (lastSpace > 0) {
-    truncated = truncated.substring(0, lastSpace);
-  }
-  truncated += '...';
-
-  if (hasMore) {
+  const escaped = escapeHtml(displayText);
+  if (hasMore && needsMore) {
     const template = document.getElementById('more-button-template');
     const clone = template.content.cloneNode(true);
-    return truncated + ' ' + clone.querySelector('button').outerHTML;
+    return escaped + ' ' + clone.querySelector('button').outerHTML;
   }
 
-  return truncated;
+  return escaped;
 }
 
 function escapeHtml(text) {
@@ -2062,11 +2027,18 @@ function renderRatingGauge(score) {
   return svg.outerHTML;
 }
 
-function highlightText(text, query) {
-  if (!query || query.length < 2) return text;
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
-  const regex = new RegExp(`(${query})`, 'gi');
-  return text.replace(regex, '<strong class="highlight">$1</strong>');
+function highlightText(text, query) {
+  const escaped = escapeHtml(text || '');
+  if (!query || query.length < 2) return escaped;
+
+  const escapedQuery = escapeRegex(escapeHtml(query));
+  if (!escapedQuery) return escaped;
+  const regex = new RegExp(`(${escapedQuery})`, 'gi');
+  return escaped.replace(regex, '<strong class="highlight">$1</strong>');
 }
 
 function truncateText(text, maxLength) {
@@ -2337,19 +2309,12 @@ function closeAll(event) {
 
 document.addEventListener("click", closeAll);
 
-function init(settings) {
+function init() {
   console.log('Initializing PlayChest SQLite app...');
-  const gamesPerPage = parseInt(settings.games_per_page, 10);
-  if (gamesPerPage > 0) {
-    GAMES_PER_PAGE = gamesPerPage;
-  }
-  initializeDatabase(settings);
+  initializeDatabase();
 }
 
-loadINI('./config.ini', function (settings) {
-  console.log('Settings loaded:', settings);
-  init(settings);
-});
+init();
 
 document.getElementById('reloadBanner')?.addEventListener('click', () => {
   window.location.reload();

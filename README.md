@@ -163,7 +163,6 @@ You can then open and filter the collection without a network connection. Sync, 
 |----------|-------------|
 | `GET /health` | Liveness |
 | `GET /ready` | Database ready |
-| `GET /api/status` | Sync status |
 | `POST /api/admin/login` | Admin login (sets a session cookie) |
 | `POST /api/admin/logout` | Admin logout |
 | `GET /api/admin/session` | Admin session status |
