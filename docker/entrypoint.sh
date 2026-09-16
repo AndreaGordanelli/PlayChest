@@ -12,11 +12,26 @@ mkdir -p "${htmlDir}" "${dataDir}"
 cp "${appDir}/index.html" "${htmlDir}/index.html"
 cp "${appDir}/style.css" "${htmlDir}/style.css"
 cp "${appDir}/app-sqlite.js" "${htmlDir}/app-sqlite.js"
+cp "${appDir}/features.js" "${htmlDir}/features.js"
 cp "${appDir}/favicon.ico" "${htmlDir}/favicon.ico"
+if [ -f "${appDir}/admin.html" ]; then
+  cp "${appDir}/admin.html" "${htmlDir}/admin.html"
+fi
+if [ -f "${appDir}/admin.js" ]; then
+  cp "${appDir}/admin.js" "${htmlDir}/admin.js"
+fi
 
 if [ -f "${configPath}" ]; then
   cp "${configPath}" "${htmlDir}/config.ini"
 fi
+
+export GAMECACHE_SYNC_STATUS_PATH="${dataDir}/sync-status.json"
+export GAMECACHE_APP_DIR="${appDir}"
+export GAMECACHE_DATA_DIR="${dataDir}"
+export GAMECACHE_HTML_DIR="${htmlDir}"
+
+python "${appDir}/scripts/sync_server.py" &
+syncServerPid=$!
 
 buildDatabase() {
   echo "Building board game database from BoardGameGeek..."
@@ -44,9 +59,12 @@ if [ "${updateInterval}" != "0" ] && [ -f "${configPath}" ]; then
   (
     while true; do
       sleep "${updateInterval}"
-      buildDatabase || echo "Scheduled database update failed."
+      curl -sf -X POST "http://127.0.0.1:9090/api/sync" >/dev/null 2>&1 \
+        || python -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:9090/api/sync', method='POST'))" \
+        || buildDatabase || echo "Scheduled database update failed."
     done
   ) &
 fi
 
+trap 'kill "${syncServerPid}" 2>/dev/null || true' EXIT TERM INT
 exec "$@"

@@ -4,6 +4,7 @@ import os
 import json
 import urllib.request
 import urllib.error
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add the scripts directory to the path for imports
@@ -14,12 +15,26 @@ sys.path.insert(0, str(script_dir))
 from gamecache.downloader import Downloader  # noqa: E402
 from gamecache.sqlite_indexer import SqliteIndexer  # noqa: E402
 from gamecache.github_integration import setup_github_integration  # noqa: E402
+from gamecache.collection_loader import load_merged_collection  # noqa: E402
 from gamecache.config import parse_config_file, create_nested_config  # noqa: E402
 from gamecache.http_client import open_url  # noqa: E402
 from setup_logging import setup_logging  # noqa: E402
 
 
 UPGRADE_INSTRUCTIONS_URL = "https://github.com/EmilStenstrom/gamecache#keeping-your-copy-updated"
+SYNC_STATUS_PATH = Path(os.environ.get("GAMECACHE_SYNC_STATUS_PATH", "data/sync-status.json"))
+
+
+def write_sync_status(status, game_count=0, error=None):
+    SYNC_STATUS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "status": status,
+        "gameCount": game_count,
+        "updatedAt": datetime.now(timezone.utc).isoformat(),
+        "error": error,
+    }
+    with open(SYNC_STATUS_PATH, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2)
 
 
 def _print_info_box(title, lines):
@@ -102,6 +117,17 @@ def main(args):
     # Convert flat config to nested structure for backward compatibility
     SETTINGS = create_nested_config(config)
 
+    write_sync_status("running")
+
+    try:
+        _run_index(args, SETTINGS)
+    except Exception as error:
+        write_sync_status("failed", error=str(error))
+        raise
+
+
+def _run_index(args, SETTINGS):
+
     # Best-effort update check (does not affect script success)
     check_for_upstream_updates_via_github(SETTINGS.get("github", {}).get("repo"))
 
@@ -114,8 +140,10 @@ def main(args):
         token=bgg_token,
     )
     extra_params = SETTINGS["boardgamegeek"].get("extra_params", {"own": 1})
-    collection = downloader.collection(
-        user_name=SETTINGS["boardgamegeek"]["user_name"],
+    user_names = SETTINGS["boardgamegeek"].get("user_names") or [SETTINGS["boardgamegeek"]["user_name"]]
+    collection = load_merged_collection(
+        downloader,
+        user_names=user_names,
         extra_params=extra_params,
     )
 
@@ -169,6 +197,8 @@ def main(args):
     else:
         print(f"Database saved locally: {gzip_path}")
 
+    write_sync_status("completed", game_count=num_games)
+
 
 if __name__ == '__main__':
     import argparse
@@ -212,4 +242,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    main(args)
+    try:
+        main(args)
+    except Exception:
+        sys.exit(1)

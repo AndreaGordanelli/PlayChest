@@ -3,7 +3,20 @@ import html
 
 
 class BoardGame:
-    def __init__(self, game_data, image="", tags=[], numplays=0, previous_players=[], expansions=[]):
+    def __init__(
+        self,
+        game_data,
+        image="",
+        tags=None,
+        numplays=0,
+        previous_players=None,
+        expansions=None,
+        collection_owners=None,
+    ):
+        tags = tags or []
+        previous_players = previous_players or []
+        expansions = expansions or []
+        collection_owners = collection_owners or []
         self.id = game_data["id"]
         self.name = game_data["name"]
         self.description = html.unescape(game_data["description"])
@@ -24,6 +37,7 @@ class BoardGame:
         self.tags = tags
         self.previous_players = previous_players
         self.expansions = expansions
+        self.collection_owners = collection_owners
 
     def calc_num_players(self, game_data, expansions):
         num_players = game_data["suggested_numplayers"].copy()
@@ -116,6 +130,7 @@ class BoardGame:
             "numplays": self.numplays,
             "image": self.image,
             "tags": self.tags,
+            "collection_owners": self.collection_owners,
             "previous_players": self.previous_players,
             "expansions": self.expansions,
             # Add the color field, ensuring it's handled if not present
