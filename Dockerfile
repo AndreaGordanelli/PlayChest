@@ -11,7 +11,7 @@ COPY scripts/requirements.txt scripts/requirements.txt
 RUN pip install --no-cache-dir -r scripts/requirements.txt
 
 COPY scripts/ scripts/
-COPY index.html style.css app-sqlite.js favicon.ico config.ini ./
+COPY index.html style.css app-sqlite.js features.js favicon.ico admin.html admin.js config.ini ./
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 

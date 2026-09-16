@@ -67,6 +67,7 @@ class Downloader():
                 tags=game_id_to_tags[game_data["id"]],
                 numplays=game_id_to_numplays[game_data["id"]],
                 previous_players=game_id_to_players[game_data["id"]],
+                collection_owners=[user_name],
                 expansions=[
                     BoardGame(
                         expansion_data,

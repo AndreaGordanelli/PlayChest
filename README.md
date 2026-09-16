@@ -103,6 +103,38 @@ Set it to `0` to disable scheduled updates.
 
 5. Open [http://localhost:8080](http://localhost:8080)
 
+## Features
+
+- Random game picker and a "What should we play tonight?" wizard
+- Shareable URLs that preserve search, filters, sort order, and view mode
+- Collection statistics dashboard with never-played shortcut
+- BGG status filters (owned, wishlist, want to play, and more)
+- Multi-collection support via multiple BGG usernames in `config.ini`
+- Grid, list, and compact view modes
+- Personal notes and custom tags stored in `/api/notes`
+- Admin page at `/admin.html` with manual sync and health endpoints
+
+### Multi-collection config
+
+```ini
+bgg_username = alice
+bgg_username_2 = bob
+```
+
+Or:
+
+```ini
+bgg_usernames = alice, bob
+```
+
+### Admin and health
+
+- Health: `GET /health`
+- Ready: `GET /ready`
+- Status: `GET /api/status`
+- Manual sync: `POST /api/sync`
+- Admin UI: [http://localhost:8080/admin.html](http://localhost:8080/admin.html)
+
 ## Configuration
 
 `config.ini` supports:

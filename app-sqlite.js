@@ -30,6 +30,18 @@ let db = null;
 let allGames = [];
 let filteredGames = [];
 let currentPage = 1;
+let currentViewMode = 'grid';
+
+const BGG_STATUS_OPTIONS = [
+  { value: 'own', label: 'Owned' },
+  { value: 'wishlist', label: 'Wishlist' },
+  { value: 'wanttoplay', label: 'Want to Play' },
+  { value: 'preordered', label: 'Preordered' },
+  { value: 'prevowned', label: 'Previously Owned' },
+  { value: 'want', label: 'Want in Trade' },
+  { value: 'wanttobuy', label: 'Want to Buy' },
+  { value: 'fortrade', label: 'For Trade' },
+];
 
 // Utility functions
 function showError(message) {
@@ -191,7 +203,7 @@ function loadAllGames() {
   const stmt = db.prepare(`
     SELECT id, name, description, categories, mechanics, players, weight,
            playing_time, min_age, rank, usersrated, numowned, rating,
-           numplays, image, tags, previous_players, expansions, color
+           numplays, image, tags, collection_owners, previous_players, expansions, color
     FROM games
     ORDER BY name
   `);
@@ -207,6 +219,7 @@ function loadAllGames() {
       row.mechanics = JSON.parse(row.mechanics || '[]');
       row.players = JSON.parse(row.players || '[]');
       row.tags = JSON.parse(row.tags || '[]');
+      row.collection_owners = JSON.parse(row.collection_owners || '[]');
       row.previous_players = JSON.parse(row.previous_players || '[]');
       row.expansions = JSON.parse(row.expansions || '[]');
     } catch (e) {
@@ -304,6 +317,9 @@ function setupSorting() {
 function setupFilters() {
   setupCategoriesFilter();
   setupMechanicsFilter();
+  setupBggStatusFilter();
+  setupCollectionOwnersFilter();
+  setupNeverPlayedFilter();
   setupPlayersFilter();
   setupWeightFilter();
   setupPlayingTimeFilter();
@@ -394,6 +410,85 @@ function setupMechanicsFilter() {
       container.style.display = 'none';
     }
   }
+}
+
+function setupBggStatusFilter() {
+  const statusCounts = {};
+  BGG_STATUS_OPTIONS.forEach(({ value }) => {
+    statusCounts[value] = 0;
+  });
+
+  allGames.forEach(game => {
+    (game.tags || []).forEach(tag => {
+      if (statusCounts[tag] !== undefined) {
+        statusCounts[tag] += 1;
+      }
+    });
+  });
+
+  const items = BGG_STATUS_OPTIONS
+    .map(({ value, label }) => ({
+      label,
+      value,
+      count: statusCounts[value] || 0,
+    }))
+    .filter(item => item.count > 0);
+
+  if (items.length > 0) {
+    createRefinementFilter('facet-bgg-status', 'BGG Status', items, 'bgg_status');
+  } else {
+    const container = document.getElementById('facet-bgg-status');
+    if (container) container.style.display = 'none';
+  }
+}
+
+function setupCollectionOwnersFilter() {
+  const ownerCounts = {};
+  allGames.forEach(game => {
+    (game.collection_owners || []).forEach(owner => {
+      ownerCounts[owner] = (ownerCounts[owner] || 0) + 1;
+    });
+  });
+
+  const owners = Object.keys(ownerCounts);
+  if (owners.length <= 1) {
+    const container = document.getElementById('facet-collection-owners');
+    if (container) container.style.display = 'none';
+    return;
+  }
+
+  const items = owners.sort().map(owner => ({
+    label: owner,
+    value: owner,
+    count: ownerCounts[owner],
+  }));
+  createRefinementFilter('facet-collection-owners', 'Collection', items, 'collection_owners');
+}
+
+function setupNeverPlayedFilter() {
+  const neverPlayedCount = allGames.filter(game => !game.numplays).length;
+  const container = document.getElementById('facet-never-played');
+  if (!container || neverPlayedCount === 0) {
+    if (container) container.style.display = 'none';
+    return;
+  }
+
+  container.innerHTML = `
+    <details class="filter-dropdown">
+      <summary><span class="material-symbols-rounded icon-medium">filter_list</span> Play history</summary>
+      <div class="filter-dropdown-content">
+        <label class="filter-item">
+          <div class="filter-item-main">
+            <input type="checkbox" name="never_played" value="1">
+            <span class="filter-label">Never played</span>
+          </div>
+          <span class="facet-count">${neverPlayedCount}</span>
+        </label>
+      </div>
+    </details>
+  `;
+
+  container.querySelector('input[name="never_played"]').addEventListener('change', onFilterChange);
 }
 
 function setupPlayersFilter() {
@@ -816,6 +911,14 @@ function createRefinementFilter(facetId, title, items, attributeName, isRadio = 
   }
 }
 
+function applyViewMode(viewMode) {
+  currentViewMode = viewMode || 'grid';
+  localStorage.setItem('gamecacheViewMode', currentViewMode);
+  document.querySelectorAll('.view-btn').forEach(button => {
+    button.classList.toggle('is-active', button.dataset.view === currentViewMode);
+  });
+}
+
 function updateClearButtonVisibility(filters) {
   const clearContainer = document.getElementById('clear-all');
   if (!clearContainer) return;
@@ -824,6 +927,9 @@ function updateClearButtonVisibility(filters) {
     query,
     selectedCategories,
     selectedMechanics,
+    selectedBggStatus,
+    selectedCollectionOwners,
+    neverPlayedOnly,
     selectedPlayerFilter,
     selectedWeight,
     selectedPlayingTime,
@@ -836,6 +942,9 @@ function updateClearButtonVisibility(filters) {
     (query && query !== '') ||
     (selectedCategories && selectedCategories.length > 0) ||
     (selectedMechanics && selectedMechanics.length > 0) ||
+    (selectedBggStatus && selectedBggStatus.length > 0) ||
+    (selectedCollectionOwners && selectedCollectionOwners.length > 0) ||
+    neverPlayedOnly ||
     (selectedPlayerFilter && selectedPlayerFilter !== 'any') ||
     (selectedWeight && selectedWeight.length > 0) ||
     (selectedPlayingTime && selectedPlayingTime.length > 0) ||
@@ -865,6 +974,27 @@ function updateFilterActiveStates(filters) {
     } else {
       mechanicsFilter.classList.remove('filter-active');
     }
+  }
+
+  const bggStatusFilter = document.getElementById('facet-bgg-status');
+  if (bggStatusFilter) {
+    bggStatusFilter.classList.toggle(
+      'filter-active',
+      !!(filters.selectedBggStatus && filters.selectedBggStatus.length > 0)
+    );
+  }
+
+  const ownersFilter = document.getElementById('facet-collection-owners');
+  if (ownersFilter) {
+    ownersFilter.classList.toggle(
+      'filter-active',
+      !!(filters.selectedCollectionOwners && filters.selectedCollectionOwners.length > 0)
+    );
+  }
+
+  const neverPlayedFilter = document.getElementById('facet-never-played');
+  if (neverPlayedFilter) {
+    neverPlayedFilter.classList.toggle('filter-active', !!filters.neverPlayedOnly);
   }
 
   // Update players filter
@@ -937,6 +1067,9 @@ function getFiltersFromURL() {
     query: params.get('q') || '',
     selectedCategories: params.get('categories')?.split(',').filter(Boolean) || [],
     selectedMechanics: params.get('mechanics')?.split(',').filter(Boolean) || [],
+    selectedBggStatus: params.get('bgg_status')?.split(',').filter(Boolean) || [],
+    selectedCollectionOwners: params.get('owners')?.split(',').filter(Boolean) || [],
+    neverPlayedOnly: params.get('never_played') === '1',
     selectedPlayerFilter: params.get('players') || 'any',
     selectedWeight: params.get('weight')?.split(',').filter(Boolean) || [],
     selectedPlayingTime: params.get('playing_time')?.split(',').filter(Boolean) || [],
@@ -944,6 +1077,7 @@ function getFiltersFromURL() {
     selectedMinAge: minAgeParam ? { min: Number(minAgeParam.split('-')[0]), max: Number(minAgeParam.split('-')[1]) } : null,
     selectedNumPlays: numPlaysParam ? { min: Number(numPlaysParam.split('-')[0]), max: Number(numPlaysParam.split('-')[1]) } : null,
     sortBy: params.get('sort') || 'name',
+    viewMode: params.get('view') || localStorage.getItem('gamecacheViewMode') || 'grid',
     page: Number(params.get('page')) || 1
   };
 }
@@ -952,6 +1086,9 @@ function getFiltersFromUI() {
   const query = document.getElementById('search-input')?.value.toLowerCase().trim() || '';
   const selectedCategories = getSelectedValues('categories');
   const selectedMechanics = getSelectedValues('mechanics');
+  const selectedBggStatus = getSelectedValues('bgg_status');
+  const selectedCollectionOwners = getSelectedValues('collection_owners');
+  const neverPlayedOnly = document.querySelector('input[name="never_played"]:checked') !== null;
   const selectedPlayerFilter = document.querySelector('input[name="players"]:checked')?.value || 'any';
   const selectedWeight = getSelectedValues('weight');
   const selectedPlayingTime = getSelectedValues('playing_time');
@@ -964,6 +1101,9 @@ function getFiltersFromUI() {
     query,
     selectedCategories,
     selectedMechanics,
+    selectedBggStatus,
+    selectedCollectionOwners,
+    neverPlayedOnly,
     selectedPlayerFilter,
     selectedWeight,
     selectedPlayingTime,
@@ -971,6 +1111,7 @@ function getFiltersFromUI() {
     selectedMinAge,
     selectedNumPlays,
     sortBy,
+    viewMode: currentViewMode,
     page: currentPage
   };
 }
@@ -981,6 +1122,9 @@ function updateURLWithFilters(filters) {
   if (filters.query) params.set('q', filters.query);
   if (filters.selectedCategories?.length) params.set('categories', filters.selectedCategories.join(','));
   if (filters.selectedMechanics?.length) params.set('mechanics', filters.selectedMechanics.join(','));
+  if (filters.selectedBggStatus?.length) params.set('bgg_status', filters.selectedBggStatus.join(','));
+  if (filters.selectedCollectionOwners?.length) params.set('owners', filters.selectedCollectionOwners.join(','));
+  if (filters.neverPlayedOnly) params.set('never_played', '1');
   if (filters.selectedPlayerFilter && filters.selectedPlayerFilter !== 'any') params.set('players', filters.selectedPlayerFilter);
   if (filters.selectedWeight?.length) params.set('weight', filters.selectedWeight.join(','));
   if (filters.selectedPlayingTime?.length) params.set('playing_time', filters.selectedPlayingTime.join(','));
@@ -988,6 +1132,7 @@ function updateURLWithFilters(filters) {
   if (filters.selectedMinAge) params.set('min_age', `${filters.selectedMinAge.min}-${filters.selectedMinAge.max}`);
   if (filters.selectedNumPlays) params.set('numplays', `${filters.selectedNumPlays.min}-${filters.selectedNumPlays.max}`);
   if (filters.sortBy && filters.sortBy !== 'name') params.set('sort', filters.sortBy);
+  if (filters.viewMode && filters.viewMode !== 'grid') params.set('view', filters.viewMode);
   if (filters.page && filters.page > 1) params.set('page', filters.page);
 
   const newUrl = `${window.location.pathname}?${params.toString()}`;
@@ -1002,6 +1147,8 @@ function updateUIFromState(state) {
   const checkboxFilters = {
     'categories': state.selectedCategories,
     'mechanics': state.selectedMechanics,
+    'bgg_status': state.selectedBggStatus,
+    'collection_owners': state.selectedCollectionOwners,
     'weight': state.selectedWeight,
     'playing_time': state.selectedPlayingTime,
     'previous_players': state.selectedPreviousPlayers,
@@ -1063,6 +1210,13 @@ function updateUIFromState(state) {
 
   document.getElementById('sort-select').value = state.sortBy;
   currentPage = state.page;
+  currentViewMode = state.viewMode || 'grid';
+  applyViewMode(currentViewMode);
+
+  const neverPlayedInput = document.querySelector('input[name="never_played"]');
+  if (neverPlayedInput) {
+    neverPlayedInput.checked = !!state.neverPlayedOnly;
+  }
 }
 
 function onFilterChange(resetPage = true) {
@@ -1094,6 +1248,9 @@ function filterGames(gamesToFilter, filters) {
     query,
     selectedCategories,
     selectedMechanics,
+    selectedBggStatus,
+    selectedCollectionOwners,
+    neverPlayedOnly,
     selectedPlayerFilter,
     selectedWeight,
     selectedPlayingTime,
@@ -1115,6 +1272,20 @@ function filterGames(gamesToFilter, filters) {
 
     if (selectedMechanics.length > 0 &&
       !selectedMechanics.some(mech => game.mechanics.includes(mech))) {
+      return false;
+    }
+
+    if (selectedBggStatus.length > 0 &&
+      !selectedBggStatus.some(status => (game.tags || []).includes(status))) {
+      return false;
+    }
+
+    if (selectedCollectionOwners.length > 0 &&
+      !selectedCollectionOwners.some(owner => (game.collection_owners || []).includes(owner))) {
+      return false;
+    }
+
+    if (neverPlayedOnly && game.numplays > 0) {
       return false;
     }
 
@@ -1258,6 +1429,47 @@ function updateAllFilterCounts(filters) {
     });
   });
   updateCountsInDOM('facet-mechanics', mechanicCounts);
+
+  const bggStatusFilters = {
+    ...filters,
+    selectedBggStatus: []
+  };
+  const gamesForBggStatusCount = filterGames(allGames, bggStatusFilters);
+  const bggStatusCounts = {};
+  BGG_STATUS_OPTIONS.forEach(({ value }) => {
+    bggStatusCounts[value] = 0;
+  });
+  gamesForBggStatusCount.forEach(game => {
+    (game.tags || []).forEach(tag => {
+      if (bggStatusCounts[tag] !== undefined) {
+        bggStatusCounts[tag] += 1;
+      }
+    });
+  });
+  updateCountsInDOM('facet-bgg-status', bggStatusCounts);
+
+  const ownerFilters = {
+    ...filters,
+    selectedCollectionOwners: []
+  };
+  const gamesForOwnerCount = filterGames(allGames, ownerFilters);
+  const ownerCounts = {};
+  gamesForOwnerCount.forEach(game => {
+    (game.collection_owners || []).forEach(owner => {
+      ownerCounts[owner] = (ownerCounts[owner] || 0) + 1;
+    });
+  });
+  updateCountsInDOM('facet-collection-owners', ownerCounts);
+
+  const neverPlayedFilters = {
+    ...filters,
+    neverPlayedOnly: false
+  };
+  const neverPlayedCount = filterGames(allGames, neverPlayedFilters).filter(game => !game.numplays).length;
+  const neverPlayedInput = document.querySelector('#facet-never-played .facet-count');
+  if (neverPlayedInput) {
+    neverPlayedInput.textContent = neverPlayedCount;
+  }
 
   const playerFilters = {
     ...filters,
@@ -1430,6 +1642,7 @@ function updateResults() {
   const gridTemplate = document.getElementById('game-grid-template');
   const gridClone = gridTemplate.content.cloneNode(true);
   const gameGrid = gridClone.querySelector('.game-grid');
+  gameGrid.classList.add(`view-${currentViewMode}`);
 
   pageGames.forEach(game => {
     gameGrid.appendChild(renderGameCard(game));
@@ -1440,6 +1653,9 @@ function updateResults() {
 
   on_render();
   updatePagination();
+  if (window.gameCacheFeatures?.enhanceRenderedGames) {
+    window.gameCacheFeatures.enhanceRenderedGames(pageGames);
+  }
 }
 
 function renderGameCard(game) {
@@ -1449,6 +1665,8 @@ function renderGameCard(game) {
 
   // Set basic card data
   card.setAttribute('data-color', game.color || '255,255,255');
+  card.setAttribute('data-game-id', game.id);
+  card.setAttribute('data-game-name', game.name);
 
   // Set images
   const summaryImg = clone.querySelector('.game-image');
@@ -1987,3 +2205,33 @@ loadINI('./config.ini', function (settings) {
   console.log('Settings loaded:', settings);
   init(settings);
 });
+
+window.gameCacheApp = {
+  getAllGames: () => allGames,
+  getFilteredGames: () => filteredGames,
+  getFiltersFromUI,
+  getFiltersFromURL,
+  applyFiltersAndSort,
+  updateResults,
+  onFilterChange,
+  applyViewMode,
+  updateURLWithFilters,
+  updateUIFromState,
+  updateStats,
+  renderGameCard,
+  getComplexityName,
+  CONFIG,
+  BGG_STATUS_OPTIONS,
+  openGameCard(gameId) {
+    const card = document.querySelector(`.game-card[data-game-id="${gameId}"]`);
+    if (card) {
+      card.setAttribute('open', 'open');
+      const details = card.querySelector('.game-details');
+      const summary = card.querySelector('summary');
+      if (details && summary) {
+        requestAnimationFrame(() => positionPopupInViewport(details, summary));
+      }
+    }
+  },
+  reloadDatabase: initializeDatabase,
+};

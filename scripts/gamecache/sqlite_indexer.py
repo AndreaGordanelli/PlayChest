@@ -49,7 +49,8 @@ class SqliteIndexer:
                 rating REAL,
                 numplays INTEGER,
                 image TEXT,
-                tags TEXT,        -- JSON array
+                tags TEXT,        -- JSON array of BGG collection status flags
+                collection_owners TEXT,  -- JSON array of BGG usernames
                 previous_players TEXT,  -- JSON array
                 expansions TEXT,  -- JSON array
                 color TEXT       -- Changed from colors to color (singular)
@@ -99,6 +100,7 @@ class SqliteIndexer:
             mechanics_json = json.dumps(game.get('mechanics', []))
             players_json = json.dumps(game.get('players', []))
             tags_json = json.dumps(game.get('tags', []))
+            collection_owners_json = json.dumps(game.get('collection_owners', []))
             previous_players_json = json.dumps(game.get('previous_players', []))
             expansions_list = game.get('expansions', [])
             expansions_json = json.dumps([self._expansion_to_dict(exp) for exp in expansions_list if exp])
@@ -141,8 +143,9 @@ class SqliteIndexer:
                 INSERT INTO games (
                     id, name, description, categories, mechanics, players,
                     weight, playing_time, min_age, rank, usersrated, numowned,
-                    rating, numplays, image, tags, previous_players, expansions, color
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    rating, numplays, image, tags, collection_owners,
+                    previous_players, expansions, color
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 game.get('id'), game.get('name'), game.get('description'), categories_json, mechanics_json,
                 players_json,
@@ -153,7 +156,8 @@ class SqliteIndexer:
                 int(game.get('usersrated')) if game.get('usersrated') is not None else None,
                 int(game.get('numowned')) if game.get('numowned') is not None else None,
                 float(game.get('rating')) if game.get('rating') is not None else None,
-                game.get('numplays'), game.get('image'), tags_json, previous_players_json,
+                game.get('numplays'), game.get('image'), tags_json, collection_owners_json,
+                previous_players_json,
                 expansions_json, color_str
             ))
         conn.commit()

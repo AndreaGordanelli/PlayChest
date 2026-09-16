@@ -5,6 +5,8 @@ Configuration parsing utilities for GameCache project.
 import os
 from pathlib import Path
 
+from .collection_loader import get_bgg_usernames
+
 
 def parse_config_file(config_path="config.txt"):
     """Parse simple key=value config file"""
@@ -48,7 +50,8 @@ def create_nested_config(config):
             "title": config["title"]
         },
         "boardgamegeek": {
-            "user_name": config["bgg_username"]
+            "user_name": config["bgg_username"],
+            "user_names": get_bgg_usernames(config),
         }
     }
 
