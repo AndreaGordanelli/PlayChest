@@ -77,7 +77,7 @@ Build a searchable, filterable site for your BoardGameGeek collection: download 
    python scripts/setup_bgg_token.py
    ```
 
-   This creates a local `.env` file with `GAMECACHE_BGG_TOKEN`.
+   This creates a local `.env` file with `GAMECACHE_BGG_TOKEN`. Add `GAMECACHE_ADMIN_PASSWORD` there as well; the admin page will not open without it.
 
 3. **Build and start**
 
@@ -141,7 +141,7 @@ Or:
 bgg_usernames = alice, bob
 ```
 
-You can also add or remove BGG usernames from `/admin.html` without restarting Docker. Remove runs a sync so those games leave the site. Usernames listed in `config.ini` stay in the file; Admin skips them until you add them again. The **Collection** filter appears when more than one owner is imported.
+You can also add or remove BGG usernames from `/admin.html` without restarting Docker. The admin page asks for a password. Set `GAMECACHE_ADMIN_PASSWORD` in `.env` and restart Docker. Remove runs a sync so those games leave the site. Usernames listed in `config.ini` stay in the file; Admin skips them until you add them again. The **Collection** filter appears when more than one owner is imported.
 
 ### Dark theme
 
@@ -164,9 +164,13 @@ You can then open and filter the collection without a network connection. Sync, 
 | `GET /health` | Liveness |
 | `GET /ready` | Database ready |
 | `GET /api/status` | Sync status |
-| `POST /api/sync` | Manual sync |
+| `POST /api/admin/login` | Admin login (sets a session cookie) |
+| `POST /api/admin/logout` | Admin logout |
+| `GET /api/admin/session` | Admin session status |
+| `POST /api/sync` | Manual sync (admin session) |
+| `GET`/`POST`/`DELETE /api/usernames` | Collection usernames (admin session) |
 | `GET`/`PUT /api/nights` | Saved nights |
-| `/admin.html` | Admin UI |
+| `/admin.html` | Admin UI (password protected) |
 
 ## Local development (without Docker)
 
@@ -186,6 +190,9 @@ python -m http.server 8080
 **BGG token errors**
 - Re-run `python scripts/setup_bgg_token.py`
 - Confirm `.env` contains `GAMECACHE_BGG_TOKEN`
+
+**Admin page asks for a password**
+- Add `GAMECACHE_ADMIN_PASSWORD` to `.env` and restart with `docker compose up --build`
 
 **No games imported**
 - Check `bgg_username` in `config.ini`

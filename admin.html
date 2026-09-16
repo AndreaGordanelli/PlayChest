@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PlayChest Admin</title>
-  <meta name="theme-color" content="#b71c1c" id="themeColorMeta">
+  <meta name="theme-color" content="#b42318" id="themeColorMeta">
   <meta name="color-scheme" content="light dark">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/svg+xml" href="icons/meeple.svg">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,1,-50..200" />
   <script>
     (function () {
@@ -31,40 +31,53 @@
           <span class="material-symbols-rounded icon-medium theme-icon-light">dark_mode</span>
           <span class="material-symbols-rounded icon-medium theme-icon-dark">light_mode</span>
         </button>
+        <button type="button" class="secondary-btn" id="adminLogoutBtn" hidden>Log out</button>
         <a href="/">Back to collection</a>
       </div>
     </header>
 
-    <section class="admin-card">
-      <h2>BGG collections</h2>
-      <p class="admin-help">Add or remove BoardGameGeek usernames here. No Docker restart is needed. Remove runs a sync so those games leave the collection. Names from config.ini stay in the file; Admin just skips them until you add them again.</p>
-      <ul class="admin-username-list" id="adminUsernameList"></ul>
-      <form class="admin-username-form" id="adminUsernameForm">
-        <input type="text" id="adminUsernameInput" placeholder="BGG username" autocomplete="off" spellcheck="false">
-        <button type="submit" class="primary-btn" id="admin-username-add-btn">Add and sync</button>
+    <section class="admin-card" id="adminLoginCard">
+      <h2>Admin login</h2>
+      <p class="admin-help" id="adminLoginHelp">Enter the admin password to sync collections and manage BGG usernames.</p>
+      <form class="adminLoginForm" id="adminLoginForm">
+        <input type="password" id="adminPasswordInput" placeholder="Password" autocomplete="current-password">
+        <button type="submit" class="primary-btn" id="adminLoginBtn">Sign in</button>
       </form>
+      <p id="adminLoginError" class="admin-error" hidden></p>
     </section>
 
-    <section class="admin-card">
-      <h2>Sync status</h2>
-      <dl class="admin-status-list">
-        <dt>Database ready</dt><dd id="admin-db-ready">Checking...</dd>
-        <dt>Sync status</dt><dd id="admin-sync-status">Checking...</dd>
-        <dt>Games indexed</dt><dd id="admin-game-count">-</dd>
-        <dt>Last update</dt><dd id="admin-updated-at">-</dd>
-      </dl>
-      <p id="admin-error" class="admin-error" hidden></p>
-      <button type="button" class="primary-btn" id="admin-sync-btn">Run sync now</button>
-    </section>
+    <div id="adminApp" hidden>
+      <section class="admin-card">
+        <h2>BGG collections</h2>
+        <p class="admin-help">Add or remove BoardGameGeek usernames here. No Docker restart is needed. Remove runs a sync so those games leave the collection. Names from config.ini stay in the file; Admin just skips them until you add them again.</p>
+        <ul class="admin-username-list" id="adminUsernameList"></ul>
+        <form class="admin-username-form" id="adminUsernameForm">
+          <input type="text" id="adminUsernameInput" placeholder="BGG username" autocomplete="off" spellcheck="false">
+          <button type="submit" class="primary-btn" id="admin-username-add-btn">Add and sync</button>
+        </form>
+      </section>
 
-    <section class="admin-card">
-      <h2>Health endpoints</h2>
-      <ul class="admin-links">
-        <li><a href="/health" target="_blank">/health</a></li>
-        <li><a href="/ready" target="_blank">/ready</a></li>
-        <li><a href="/api/status" target="_blank">/api/status</a></li>
-      </ul>
-    </section>
+      <section class="admin-card">
+        <h2>Sync status</h2>
+        <dl class="admin-status-list">
+          <dt>Database ready</dt><dd id="admin-db-ready">Checking...</dd>
+          <dt>Sync status</dt><dd id="admin-sync-status">Checking...</dd>
+          <dt>Games indexed</dt><dd id="admin-game-count">-</dd>
+          <dt>Last update</dt><dd id="admin-updated-at">-</dd>
+        </dl>
+        <p id="admin-error" class="admin-error" hidden></p>
+        <button type="button" class="primary-btn" id="admin-sync-btn">Run sync now</button>
+      </section>
+
+      <section class="admin-card">
+        <h2>Health endpoints</h2>
+        <ul class="admin-links">
+          <li><a href="/health" target="_blank">/health</a></li>
+          <li><a href="/ready" target="_blank">/ready</a></li>
+          <li><a href="/api/status" target="_blank">/api/status</a></li>
+        </ul>
+      </section>
+    </div>
   </main>
   <script src="theme.js"></script>
   <script src="admin.js"></script>

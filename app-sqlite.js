@@ -2374,14 +2374,24 @@ window.gameCacheApp = {
   CONFIG,
   BGG_STATUS_OPTIONS,
   openGameCard(gameId) {
-    const card = document.querySelector(`.game-card[data-game-id="${gameId}"]`);
-    if (card) {
-      card.setAttribute('open', 'open');
-      const details = card.querySelector('.game-details');
-      const summary = card.querySelector('summary');
-      if (details && summary) {
-        requestAnimationFrame(() => positionPopupInViewport(details, summary));
+    const id = String(gameId);
+    const gameIndex = filteredGames.findIndex(game => String(game.id) === id);
+    if (gameIndex >= 0) {
+      const page = Math.floor(gameIndex / GAMES_PER_PAGE) + 1;
+      if (page !== currentPage) {
+        currentPage = page;
+        updateURLWithFilters(getFiltersFromUI());
+        updateResults();
       }
+    }
+    const card = document.querySelector(`.game-card[data-game-id="${id}"]`);
+    if (!card) return;
+    card.open = true;
+    card.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+    const details = card.querySelector('.game-details');
+    const summary = card.querySelector('summary');
+    if (details && summary) {
+      requestAnimationFrame(() => positionPopupInViewport(details, summary));
     }
   },
   reloadDatabase: initializeDatabase,

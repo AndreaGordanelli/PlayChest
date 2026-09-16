@@ -23,8 +23,10 @@
 
   function closeModal() {
     modal.hidden = true;
-    modalBody.innerHTML = '';
     modalPanel.classList.remove('is-wide');
+    requestAnimationFrame(() => {
+      if (modal.hidden) modalBody.innerHTML = '';
+    });
   }
 
   modalClose.addEventListener('click', closeModal);
@@ -133,8 +135,9 @@
     `);
 
     document.getElementById('open-picked-game').onclick = () => {
+      const gameId = game.id;
       closeModal();
-      getApp().openGameCard(game.id);
+      requestAnimationFrame(() => getApp().openGameCard(gameId));
     };
     document.getElementById('pick-another-game').onclick = () => {
       const nextGame = pickRandomGame(getApp().getFilteredGames());

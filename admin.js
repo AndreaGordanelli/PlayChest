@@ -1,13 +1,41 @@
+const fetchOptions = { cache: 'no-store', credentials: 'same-origin' };
+const adminTokenKey = 'playChestAdminToken';
+
+function adminHeaders(extra = {}) {
+  const headers = { ...extra };
+  const token = sessionStorage.getItem(adminTokenKey);
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, {
+    ...fetchOptions,
+    ...options,
+    headers: adminHeaders(options.headers || {}),
+  });
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = {};
+  }
+  if (response.status === 401) {
+    sessionStorage.removeItem(adminTokenKey);
+    showLogin();
+  }
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed (${response.status})`);
+  }
+  return payload;
+}
+
 async function fetchStatus() {
-  const response = await fetch('/api/status', { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Status request failed (${response.status})`);
-  return response.json();
+  return fetchJson('/api/status');
 }
 
 async function fetchUsernames() {
-  const response = await fetch('/api/usernames', { cache: 'no-store' });
-  if (!response.ok) throw new Error(`Usernames request failed (${response.status})`);
-  return response.json();
+  return fetchJson('/api/usernames');
 }
 
 function setText(id, value) {
@@ -16,14 +44,40 @@ function setText(id, value) {
 
 function showAdminError(message) {
   const errorBox = document.getElementById('admin-error');
+  if (!errorBox) return;
   errorBox.hidden = false;
   errorBox.textContent = message;
 }
 
 function hideAdminError() {
   const errorBox = document.getElementById('admin-error');
+  if (!errorBox) return;
   errorBox.hidden = true;
   errorBox.textContent = '';
+}
+
+function showLoginError(message) {
+  const errorBox = document.getElementById('adminLoginError');
+  errorBox.hidden = false;
+  errorBox.textContent = message;
+}
+
+function hideLoginError() {
+  const errorBox = document.getElementById('adminLoginError');
+  errorBox.hidden = true;
+  errorBox.textContent = '';
+}
+
+function showLogin() {
+  document.getElementById('adminLoginCard').hidden = false;
+  document.getElementById('adminApp').hidden = true;
+  document.getElementById('adminLogoutBtn').hidden = true;
+}
+
+function showAdminApp() {
+  document.getElementById('adminLoginCard').hidden = true;
+  document.getElementById('adminApp').hidden = false;
+  document.getElementById('adminLogoutBtn').hidden = false;
 }
 
 async function refreshStatus() {
@@ -75,10 +129,7 @@ async function runSync() {
   button.disabled = true;
   button.textContent = 'Starting sync...';
   try {
-    const response = await fetch('/api/sync', { method: 'POST' });
-    if (!response.ok && response.status !== 202) {
-      throw new Error(`Sync request failed (${response.status})`);
-    }
+    await fetchJson('/api/sync', { method: 'POST' });
     button.textContent = 'Sync running...';
     const poll = setInterval(async () => {
       await refreshStatus();
@@ -105,15 +156,11 @@ async function addUsername(event) {
   if (!username) return;
   button.disabled = true;
   try {
-    const response = await fetch('/api/usernames', {
+    await fetchJson('/api/usernames', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username }),
     });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || `Add username failed (${response.status})`);
-    }
     input.value = '';
     await refreshUsernames();
     await runSync();
@@ -125,17 +172,85 @@ async function addUsername(event) {
 }
 
 async function removeUsername(username) {
-  const response = await fetch(`/api/usernames?username=${encodeURIComponent(username)}`, {
+  await fetchJson(`/api/usernames?username=${encodeURIComponent(username)}`, {
     method: 'DELETE',
   });
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload.error || `Remove username failed (${response.status})`);
-  }
   await refreshUsernames();
   await runSync();
 }
 
+async function loginAdmin(event) {
+  event.preventDefault();
+  const input = document.getElementById('adminPasswordInput');
+  const button = document.getElementById('adminLoginBtn');
+  const password = input.value;
+  if (!password) return;
+  button.disabled = true;
+  hideLoginError();
+  try {
+    const payload = await fetchJson('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (payload.sessionToken) {
+      sessionStorage.setItem(adminTokenKey, payload.sessionToken);
+    }
+    input.value = '';
+    await enterAdmin();
+  } catch (error) {
+    showLoginError(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function logoutAdmin() {
+  try {
+    await fetchJson('/api/admin/logout', { method: 'POST' });
+  } catch (error) {
+    // still return to the login screen
+  }
+  sessionStorage.removeItem(adminTokenKey);
+  showLogin();
+}
+
+let statusTimer = null;
+let usernamesTimer = null;
+
+async function enterAdmin() {
+  showAdminApp();
+  await refreshStatus();
+  await refreshUsernames();
+  if (statusTimer) clearInterval(statusTimer);
+  if (usernamesTimer) clearInterval(usernamesTimer);
+  statusTimer = setInterval(refreshStatus, 10000);
+  usernamesTimer = setInterval(refreshUsernames, 10000);
+}
+
+async function initAdmin() {
+  try {
+    const session = await fetchJson('/api/admin/session');
+    if (!session.passwordConfigured) {
+      showLogin();
+      document.getElementById('adminLoginForm').hidden = true;
+      document.getElementById('adminLoginHelp').textContent =
+        'Set GAMECACHE_ADMIN_PASSWORD in your .env file and restart Docker.';
+      return;
+    }
+    if (session.authenticated) {
+      await enterAdmin();
+      return;
+    }
+    showLogin();
+  } catch (error) {
+    showLogin();
+    showLoginError(error.message);
+  }
+}
+
+document.getElementById('adminLoginForm').addEventListener('submit', loginAdmin);
+document.getElementById('adminLogoutBtn').addEventListener('click', logoutAdmin);
 document.getElementById('admin-sync-btn').addEventListener('click', runSync);
 document.getElementById('adminUsernameForm').addEventListener('submit', addUsername);
 document.getElementById('adminUsernameList').addEventListener('click', async (event) => {
@@ -152,7 +267,4 @@ document.getElementById('adminUsernameList').addEventListener('click', async (ev
     showAdminError(error.message);
   }
 });
-refreshStatus();
-refreshUsernames();
-setInterval(refreshStatus, 10000);
-setInterval(refreshUsernames, 10000);
+initAdmin();

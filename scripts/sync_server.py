@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Lightweight API server for health checks, sync control, and personal notes."""
 
+import hashlib
+import hmac
 import json
 import os
 import re
 import subprocess
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -26,6 +29,12 @@ USERNAMES_PATH = DATA_DIR / "bgg-usernames.json"
 SYNC_LOCK = threading.Lock()
 SYNC_RUNNING = False
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_ -]{1,50}$")
+ADMIN_COOKIE_NAME = "playChestAdmin"
+ADMIN_SESSION_TTL = 60 * 60 * 24
+LOGIN_WINDOW_SECONDS = 600
+LOGIN_MAX_ATTEMPTS = 20
+loginAttemptState = {"startedAt": 0.0, "count": 0}
+loginAttemptLock = threading.Lock()
 
 
 disconnectedErrors = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
@@ -114,6 +123,65 @@ def save_extra_usernames(extraUsernames):
     return save_usernames_file(extraUsernames)
 
 
+def getAdminPassword():
+    return os.environ.get("GAMECACHE_ADMIN_PASSWORD", "").strip()
+
+
+def getAdminSecret():
+    configured = os.environ.get("GAMECACHE_ADMIN_SECRET", "").strip()
+    if configured:
+        return configured.encode("utf-8")
+    password = getAdminPassword()
+    return hashlib.sha256(b"playchest-admin|" + password.encode("utf-8")).digest()
+
+
+def passwordsMatch(provided, expected):
+    providedHash = hashlib.sha256(provided.encode("utf-8")).digest()
+    expectedHash = hashlib.sha256(expected.encode("utf-8")).digest()
+    return hmac.compare_digest(providedHash, expectedHash)
+
+
+def createAdminToken():
+    issuedAt = str(int(time.time()))
+    digest = hmac.new(getAdminSecret(), issuedAt.encode("utf-8"), hashlib.sha256).hexdigest()
+    return f"{issuedAt}.{digest}"
+
+
+def isAdminTokenValid(token):
+    if not token or "." not in token:
+        return False
+    issuedAt, digest = token.split(".", 1)
+    expected = hmac.new(getAdminSecret(), issuedAt.encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(digest, expected):
+        return False
+    try:
+        age = time.time() - int(issuedAt)
+    except ValueError:
+        return False
+    return 0 <= age <= ADMIN_SESSION_TTL
+
+
+def isLoginRateLimited():
+    now = time.time()
+    with loginAttemptLock:
+        startedAt = loginAttemptState["startedAt"]
+        if now - startedAt > LOGIN_WINDOW_SECONDS:
+            loginAttemptState["startedAt"] = now
+            loginAttemptState["count"] = 0
+            return False
+        return loginAttemptState["count"] >= LOGIN_MAX_ATTEMPTS
+
+
+def recordLoginAttempt():
+    now = time.time()
+    with loginAttemptLock:
+        if now - loginAttemptState["startedAt"] > LOGIN_WINDOW_SECONDS:
+            loginAttemptState["startedAt"] = now
+            loginAttemptState["count"] = 1
+        else:
+            loginAttemptState["count"] += 1
+
+
 def get_status_payload():
     payload = read_json(STATUS_PATH, {})
     payload["databaseReady"] = DB_PATH.exists() and DB_PATH.stat().st_size > 0
@@ -199,17 +267,62 @@ class SyncApiHandler(BaseHTTPRequestHandler):
         except disconnectedErrors:
             return
 
-    def _send_json(self, status_code, payload):
+    def _send_json(self, status_code, payload, cookies=None):
         body = json.dumps(payload).encode("utf-8")
         try:
             self.send_response(status_code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
             self.send_header("Access-Control-Allow-Origin", "*")
+            for cookie in cookies or []:
+                self.send_header("Set-Cookie", cookie)
             self.end_headers()
             self.wfile.write(body)
         except disconnectedErrors:
             return
+
+    def _cookieFlags(self):
+        flags = f"Path=/api; HttpOnly; SameSite=Strict; Max-Age={ADMIN_SESSION_TTL}"
+        forwarded = (self.headers.get("X-Forwarded-Proto") or "").split(",")[0].strip().lower()
+        if forwarded == "https":
+            flags += "; Secure"
+        return flags
+
+    def _adminCookieHeader(self, token, clear=False):
+        flags = self._cookieFlags()
+        if clear:
+            return f"{ADMIN_COOKIE_NAME}=; Path=/api; HttpOnly; SameSite=Strict; Max-Age=0"
+        return f"{ADMIN_COOKIE_NAME}={token}; {flags}"
+
+    def _readCookies(self):
+        cookies = {}
+        raw = self.headers.get("Cookie", "")
+        for part in raw.split(";"):
+            if "=" not in part:
+                continue
+            key, value = part.strip().split("=", 1)
+            cookies[key] = value
+        return cookies
+
+    def _getAdminToken(self):
+        authorization = self.headers.get("Authorization", "")
+        if authorization.lower().startswith("bearer "):
+            return authorization.split(" ", 1)[1].strip()
+        return self._readCookies().get(ADMIN_COOKIE_NAME, "")
+
+    def _isAdminAuthenticated(self):
+        if not getAdminPassword():
+            return False
+        return isAdminTokenValid(self._getAdminToken())
+
+    def _requireAdmin(self):
+        if not getAdminPassword():
+            self._send_json(503, {"error": "Admin password is not configured"})
+            return False
+        if not self._isAdminAuthenticated():
+            self._send_json(401, {"error": "Admin login required"})
+            return False
+        return True
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", "0"))
@@ -222,7 +335,7 @@ class SyncApiHandler(BaseHTTPRequestHandler):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
 
     def do_GET(self):
@@ -256,7 +369,17 @@ class SyncApiHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"nights": nights})
             return
 
+        if path == "/api/admin/session":
+            passwordConfigured = bool(getAdminPassword())
+            self._send_json(200, {
+                "authenticated": self._isAdminAuthenticated(),
+                "passwordConfigured": passwordConfigured,
+            })
+            return
+
         if path == "/api/usernames":
+            if not self._requireAdmin():
+                return
             self._send_json(200, get_usernames_payload())
             return
 
@@ -265,7 +388,33 @@ class SyncApiHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         path = urlparse(self.path).path
 
+        if path == "/api/admin/login":
+            if not getAdminPassword():
+                self._send_json(503, {"error": "Set GAMECACHE_ADMIN_PASSWORD in .env and restart Docker"})
+                return
+            if isLoginRateLimited():
+                self._send_json(429, {"error": "Too many login attempts. Try again later."})
+                return
+            payload = self._read_json_body()
+            provided = str(payload.get("password", ""))
+            recordLoginAttempt()
+            if not passwordsMatch(provided, getAdminPassword()):
+                self._send_json(401, {"error": "Wrong password"})
+                return
+            token = createAdminToken()
+            self._send_json(200, {
+                "authenticated": True,
+                "sessionToken": token,
+            }, cookies=[self._adminCookieHeader(token)])
+            return
+
+        if path == "/api/admin/logout":
+            self._send_json(200, {"authenticated": False}, cookies=[self._adminCookieHeader("", clear=True)])
+            return
+
         if path == "/api/sync":
+            if not self._requireAdmin():
+                return
             started = run_sync()
             if not started:
                 self._send_json(409, {"error": "Sync already running"})
@@ -274,6 +423,8 @@ class SyncApiHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/usernames":
+            if not self._requireAdmin():
+                return
             payload = self._read_json_body()
             username = str(payload.get("username", "")).strip()
             if not username:
@@ -338,6 +489,8 @@ class SyncApiHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/usernames":
+            if not self._requireAdmin():
+                return
             payload = self._read_json_body()
             extraUsernames = payload.get("extraUsernames")
             if not isinstance(extraUsernames, list):
@@ -355,6 +508,8 @@ class SyncApiHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/usernames":
+            if not self._requireAdmin():
+                return
             username = (parse_qs(parsed.query).get("username") or [""])[0].strip()
             if not username:
                 self._send_json(400, {"error": "username is required"})

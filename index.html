@@ -4,7 +4,7 @@
   <title>All my boardgames</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#b71c1c" id="themeColorMeta">
+  <meta name="theme-color" content="#b42318" id="themeColorMeta">
   <meta name="color-scheme" content="light dark">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="icons/meeple.svg">
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,1,-50..200" />
   <script>
     (function () {
@@ -33,38 +33,51 @@
   <button type="button" class="reload-banner" id="reloadBanner" hidden>Collection updated. Click to reload.</button>
 
   <header class="search">
-    <img class="logo" src="icons/meeple.svg" alt="PlayChest" height="36" width="36">
-    <div class="search-box" id="search-box"></div>
-    <div class="toolbar" id="toolbar">
-      <button type="button" class="toolbar-btn" id="filtersBtn" title="Filters">
-        <span class="material-symbols-rounded icon-medium">filter_list</span>
-        <span class="toolbar-label">Filters</span>
-        <span class="filterCountBadge" id="filterCountBadge" hidden></span>
-      </button>
-      <button type="button" class="toolbar-btn" id="random-game-btn" title="Pick a random game">
-        <span class="material-symbols-rounded icon-medium">casino</span>
-        <span class="toolbar-label">Random</span>
-      </button>
-      <button type="button" class="toolbar-btn" id="nightsBtn" title="Saved nights">
-        <span class="material-symbols-rounded icon-medium">nights_stay</span>
-        <span class="toolbar-label">Night</span>
-      </button>
-      <button type="button" class="toolbar-btn" id="bothOfUsBtn" title="Both of us">
-        <span class="material-symbols-rounded icon-medium">favorite</span>
-        <span class="toolbar-label">Both of us</span>
-      </button>
-      <button type="button" class="toolbar-btn" id="stats-btn" title="Collection statistics">
-        <span class="material-symbols-rounded icon-medium">bar_chart</span>
-        <span class="toolbar-label">Stats</span>
-      </button>
-      <button type="button" class="toolbar-btn" id="compareBtn" title="Compare two games">
-        <span class="material-symbols-rounded icon-medium">compare</span>
-        <span class="toolbar-label">Compare</span>
-      </button>
-      <button type="button" class="toolbar-btn theme-toggle" id="themeToggle" title="Switch to dark theme" aria-label="Switch to dark theme">
-        <span class="material-symbols-rounded icon-medium theme-icon-light">dark_mode</span>
-        <span class="material-symbols-rounded icon-medium theme-icon-dark">light_mode</span>
-      </button>
+    <div class="searchTop">
+      <a class="brand" href="./">
+        <img class="logo" src="icons/meeple.svg" alt="" height="36" width="36">
+        <span class="brandName">PlayChest</span>
+      </a>
+      <div class="search-box" id="search-box">
+        <span class="material-symbols-rounded searchIcon" aria-hidden="true">search</span>
+      </div>
+      <div class="toolbar" id="toolbar">
+        <button type="button" class="toolbar-btn" id="filtersBtn" title="Filters">
+          <span class="material-symbols-rounded icon-medium">filter_list</span>
+          <span class="toolbar-label">Filters</span>
+          <span class="filterCountBadge" id="filterCountBadge" hidden></span>
+        </button>
+        <button type="button" class="toolbar-btn" id="random-game-btn" title="Pick a random game">
+          <span class="material-symbols-rounded icon-medium">casino</span>
+          <span class="toolbar-label">Random</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="nightsBtn" title="Saved nights">
+          <span class="material-symbols-rounded icon-medium">nights_stay</span>
+          <span class="toolbar-label">Night</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="bothOfUsBtn" title="Both of us">
+          <span class="material-symbols-rounded icon-medium">favorite</span>
+          <span class="toolbar-label">Both of us</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="stats-btn" title="Collection statistics">
+          <span class="material-symbols-rounded icon-medium">bar_chart</span>
+          <span class="toolbar-label">Stats</span>
+        </button>
+        <button type="button" class="toolbar-btn" id="compareBtn" title="Compare two games">
+          <span class="material-symbols-rounded icon-medium">compare</span>
+          <span class="toolbar-label">Compare</span>
+        </button>
+        <button type="button" class="toolbar-btn theme-toggle" id="themeToggle" title="Switch to dark theme" aria-label="Switch to dark theme">
+          <span class="material-symbols-rounded icon-medium theme-icon-light">dark_mode</span>
+          <span class="material-symbols-rounded icon-medium theme-icon-dark">light_mode</span>
+        </button>
+      </div>
+    </div>
+    <div class="searchMeta">
+      <div class="sort-group">
+        <label for="sort-select">Sort by</label>
+        <div class="sort-by" id="sort-by"></div>
+      </div>
       <div class="view-toggle" id="view-toggle">
         <button type="button" class="toolbar-btn view-btn is-active" data-view="grid" title="Grid view">
           <span class="material-symbols-rounded icon-medium">grid_view</span>
@@ -76,12 +89,8 @@
           <span class="material-symbols-rounded icon-medium">density_small</span>
         </button>
       </div>
+      <div class="stats" id="stats"></div>
     </div>
-    <div class="sort-group">
-      <label for="sort-select">Sort by:</label>
-      <div class="sort-by" id="sort-by"></div>
-    </div>
-    <div class="stats" id="stats"></div>
   </header>
   <div class="compareBanner" id="compareBanner" hidden>
     <span id="compareBannerText">Click two games to compare</span>
