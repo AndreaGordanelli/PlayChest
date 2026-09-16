@@ -3,6 +3,7 @@
 Simple script to check if the GameCache website is working properly.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -11,32 +12,12 @@ script_dir = Path(__file__).parent
 sys.path.insert(0, str(script_dir))
 
 # Now import after path is set
-from gamecache.config import parse_config_file  # noqa: E402
 from gamecache.http_client import make_http_request  # noqa: E402
 
-def check_website():
+
+def check_website(base_url="http://localhost:8080"):
     """Check if the GameCache website is accessible and working"""
-
-    # Load config to get repository info
-    config_path = Path("config.ini")
-    if not config_path.exists():
-        print("❌ config.ini not found! Make sure you're in the GameCache directory.")
-        return False
-
-    try:
-        config = parse_config_file("config.ini")
-    except Exception as e:
-        print(f"❌ config.ini has invalid syntax: {e}")
-        return False
-
-    if "github_repo" not in config:
-        print("❌ github_repo not found in config.ini")
-        return False
-
-    repo = config["github_repo"]
-    username = repo.split("/")[0]
-
-    website_url = f"https://{username}.github.io/gamecache"
+    website_url = base_url.rstrip("/")
 
     print(f"🔍 Checking website: {website_url}")
 
@@ -44,44 +25,45 @@ def check_website():
         response = make_http_request(website_url, timeout=10)
         response_text = response.decode('utf-8', errors='ignore')
 
-        # Check if it's the GameCache website
         if "gamecache" not in response_text.lower() and "boardgame" not in response_text.lower():
             print("⚠️  Website is accessible but doesn't look like GameCache")
-            print("   This might be a different GitHub Pages site")
             return False
 
-        # Check if database is loading
-        if "Loading database..." in response_text:
-            print("✅ Website is accessible!")
-            print("🔍 Checking database...")
-
-            # Check if database file exists in releases (just try to get first few bytes)
-            database_url = f"https://github.com/{repo}/releases/latest/download/gamecache.sqlite.gz"
-            try:
-                make_http_request(database_url, timeout=10)
-                print("✅ Database file found!")
-                print("   If the website shows 'Loading database...' it should work shortly.")
-                print("   Try refreshing the page or waiting a few minutes.")
-            except Exception:
-                print("❌ Database file not found")
-                print("   You need to run: python scripts/download_and_index.py --cache_bgg")
-                print("   This will create and upload your database.")
-                return False
-        else:
-            print("✅ Website is accessible and appears to be working!")
+        database_url = f"{website_url}/gamecache.sqlite.gz"
+        print("🔍 Checking database endpoint...")
+        try:
+            make_http_request(database_url, timeout=10)
+            print("✅ Database file is reachable!")
+        except Exception:
+            print("❌ Database file not found")
+            print("   Run: python scripts/download_and_index.py --cache_bgg")
+            print("   Or restart Docker and wait for the initial sync to finish.")
+            return False
 
         print(f"\n🌐 Your website: {website_url}")
         return True
 
     except Exception as e:
         print(f"❌ Error accessing website: {e}")
-        print("   Check your internet connection and try again")
+        print("   Check that the server or Docker container is running")
         return False
 
-def main():
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Check whether the GameCache site is reachable.")
+    parser.add_argument(
+        "--url",
+        default="http://localhost:8080",
+        help="Base URL of the running site (default: http://localhost:8080)",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
     print("🌐 Checking GameCache website status...\n")
 
-    success = check_website()
+    success = check_website(args.url)
 
     print("\n" + "=" * 50)
 

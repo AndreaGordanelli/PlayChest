@@ -1,0 +1,12 @@
+__pycache__
+.python-version
+*.sqlite
+*.sqlite-journal
+*.sqlite.gz
+.env
+.git
+.github
+*.md
+!README.md
+gamecache-preview.png
+Browserstack-logo@2x.png

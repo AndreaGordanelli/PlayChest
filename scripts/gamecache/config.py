@@ -49,11 +49,13 @@ def create_nested_config(config):
         },
         "boardgamegeek": {
             "user_name": config["bgg_username"]
-        },
-        "github": {
-            "repo": config["github_repo"]
         }
     }
+
+    if "github_repo" in config:
+        nested["github"] = {
+            "repo": config["github_repo"]
+        }
     
     # Check for BGG token in environment variable first
     bgg_token = os.environ.get('GAMECACHE_BGG_TOKEN')
