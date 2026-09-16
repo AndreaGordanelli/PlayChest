@@ -121,7 +121,7 @@ function loadINI(path, callback) {
 async function initializeDatabase(settings) {
   try {
     const SQL = await initSqlJs({
-      locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
+      locateFile: file => `./vendor/${file}`
     });
 
     const dbUrl = './gamecache.sqlite.gz';
@@ -148,6 +148,7 @@ async function initializeDatabase(settings) {
 
     loadAllGames();
     initializeUI();
+    prefetchCollectionImages();
 
   } catch (error) {
     console.error('Error initializing database:', error);
@@ -232,6 +233,41 @@ function loadAllGames() {
 
   filteredGames = [...allGames];
   console.log(`Loaded ${allGames.length} games.`);
+}
+
+function prefetchCollectionImages() {
+  const urls = [];
+  allGames.forEach(game => {
+    if (game.image) urls.push(game.image);
+    (game.expansions || []).forEach(expansion => {
+      if (expansion && expansion.image) urls.push(expansion.image);
+    });
+  });
+
+  const uniqueUrls = [...new Set(urls)];
+  let nextIndex = 0;
+  const workerCount = 4;
+
+  async function runWorker() {
+    while (nextIndex < uniqueUrls.length) {
+      const url = uniqueUrls[nextIndex++];
+      try {
+        await fetch(url, { mode: 'no-cors', credentials: 'omit' });
+      } catch (error) {
+        // Ignore failed image prefetches so browsing is not blocked.
+      }
+    }
+  }
+
+  const startPrefetch = () => {
+    Promise.all(Array.from({ length: workerCount }, runWorker));
+  };
+
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(startPrefetch);
+  } else {
+    setTimeout(startPrefetch, 500);
+  }
 }
 
 function initializeUI() {
@@ -2104,8 +2140,6 @@ function on_render() {
 
     const gameDetails = card.querySelector(".game-details");
     if (gameDetails) {
-      gameDetails.style.backgroundColor = '#FFFFFF';
-
       const cardHeader = card.querySelector(".card-header");
       if (cardHeader) {
         cardHeader.style.backgroundColor = `rgb(${color})`;

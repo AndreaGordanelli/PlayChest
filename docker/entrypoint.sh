@@ -7,13 +7,18 @@ dataDir="/app/data"
 dbPath="${htmlDir}/gamecache.sqlite.gz"
 configPath="${appDir}/config.ini"
 
-mkdir -p "${htmlDir}" "${dataDir}"
+mkdir -p "${htmlDir}" "${dataDir}" "${htmlDir}/vendor" "${htmlDir}/icons"
 
 cp "${appDir}/index.html" "${htmlDir}/index.html"
 cp "${appDir}/style.css" "${htmlDir}/style.css"
 cp "${appDir}/app-sqlite.js" "${htmlDir}/app-sqlite.js"
 cp "${appDir}/features.js" "${htmlDir}/features.js"
+cp "${appDir}/theme.js" "${htmlDir}/theme.js"
+cp "${appDir}/sw.js" "${htmlDir}/sw.js"
+cp "${appDir}/manifest.webmanifest" "${htmlDir}/manifest.webmanifest"
 cp "${appDir}/favicon.ico" "${htmlDir}/favicon.ico"
+cp -a "${appDir}/vendor/." "${htmlDir}/vendor/"
+cp -a "${appDir}/icons/." "${htmlDir}/icons/"
 if [ -f "${appDir}/admin.html" ]; then
   cp "${appDir}/admin.html" "${htmlDir}/admin.html"
 fi

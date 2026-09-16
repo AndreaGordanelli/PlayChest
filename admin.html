@@ -4,15 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GameCache Admin</title>
+  <meta name="theme-color" content="#b71c1c" id="themeColorMeta">
+  <meta name="color-scheme" content="light dark">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/meeple.svg">
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100..1000&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,1,-50..200" />
+  <script>
+    (function () {
+      const stored = localStorage.getItem('gamecacheTheme');
+      const theme = stored === 'light' || stored === 'dark'
+        ? stored
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
 </head>
 <body class="admin-page">
+  <div class="offline-banner" id="offlineBanner">You are offline. Browsing the cached collection.</div>
   <main class="admin-shell">
     <header class="admin-header">
       <h1>GameCache Admin</h1>
-      <a href="/">Back to collection</a>
+      <div class="admin-header-actions">
+        <button type="button" class="toolbar-btn theme-toggle" id="themeToggle" title="Switch to dark theme" aria-label="Switch to dark theme">
+          <span class="material-symbols-rounded icon-medium theme-icon-light">dark_mode</span>
+          <span class="material-symbols-rounded icon-medium theme-icon-dark">light_mode</span>
+        </button>
+        <a href="/">Back to collection</a>
+      </div>
     </header>
 
     <section class="admin-card">
@@ -36,6 +56,7 @@
       </ul>
     </section>
   </main>
+  <script src="theme.js"></script>
   <script src="admin.js"></script>
 </body>
 </html>

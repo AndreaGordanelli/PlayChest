@@ -1,0 +1,31 @@
+{
+  "name": "GameCache",
+  "short_name": "GameCache",
+  "description": "Browse and filter your BoardGameGeek collection, including offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#b71c1c",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "icons/meeple.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
