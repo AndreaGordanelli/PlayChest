@@ -143,76 +143,15 @@
   }
 
   function setupRandomPicker() {
-    document.getElementById('random-game-btn').addEventListener('click', () => {
+    const button = document.getElementById('random-game-btn');
+    if (!button) return;
+    button.addEventListener('click', () => {
       const game = pickRandomGame(getApp().getFilteredGames());
       if (!game) {
         openModal('Random pick', '<p>No games match the current filters.</p>');
         return;
       }
       showPickedGame(game, 'Random pick');
-    });
-  }
-
-  function setupTonightWizard() {
-    document.getElementById('tonight-btn').addEventListener('click', () => {
-      openModal('What should we play tonight?', `
-        <form id="tonight-form" class="tonight-form">
-          <label>Players
-            <input type="number" id="tonight-players" min="1" max="20" value="4">
-          </label>
-          <label>Max playing time
-            <select id="tonight-time">
-              <option value="">Any</option>
-              <option value="< 30min">&lt; 30 min</option>
-              <option value="30min - 1h">30 min - 1 h</option>
-              <option value="1-2h" selected>1-2 h</option>
-              <option value="2-3h">2-3 h</option>
-              <option value="3-4h">3-4 h</option>
-              <option value="> 4h">&gt; 4 h</option>
-            </select>
-          </label>
-          <label>Complexity
-            <select id="tonight-weight">
-              <option value="">Any</option>
-              <option value="Light">Light</option>
-              <option value="Light Medium">Light Medium</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="Medium Heavy">Medium Heavy</option>
-              <option value="Heavy">Heavy</option>
-            </select>
-          </label>
-          <button type="submit" class="primary-btn">Suggest a game</button>
-        </form>
-      `);
-
-      document.getElementById('tonight-form').addEventListener('submit', (event) => {
-        event.preventDefault();
-        const players = Number(document.getElementById('tonight-players').value);
-        const playingTime = document.getElementById('tonight-time').value;
-        const weight = document.getElementById('tonight-weight').value;
-        const app = getApp();
-        const baseFilters = app.getFiltersFromUI();
-        const tonightFilters = {
-          ...baseFilters,
-          selectedPlayerFilter: String(players),
-          selectedPlayingTime: playingTime ? [playingTime] : [],
-          selectedWeight: weight ? [weight] : [],
-          page: 1,
-        };
-        app.applyFiltersAndSort(tonightFilters);
-        app.updateURLWithFilters(tonightFilters);
-        app.updateUIFromState(tonightFilters);
-        app.updateResults();
-        app.updateStats();
-
-        const matches = app.getFilteredGames();
-        const game = pickRandomGame(matches);
-        if (!game) {
-          modalBody.innerHTML = '<p>No games match tonight\'s criteria. Try relaxing the filters.</p>';
-          return;
-        }
-        showPickedGame(game, 'Tonight\'s suggestion');
-      });
     });
   }
 
@@ -735,11 +674,136 @@
 
   function setupSavedNights() {
     const button = document.getElementById('nightsBtn');
+    if (button) {
+      button.addEventListener('click', async () => {
+        await loadSavedNights();
+        renderSavedNightsModal();
+      });
+    }
+    loadSavedNights();
+  }
+
+  function setupFilterSheet() {
+    const sheet = document.getElementById('filterSheet');
+    const openButton = document.getElementById('filtersBtn');
+    const closeButton = document.getElementById('filterSheetClose');
+    if (!sheet || !openButton) return;
+    const closeSheet = () => { sheet.hidden = true; };
+    openButton.addEventListener('click', () => { sheet.hidden = false; });
+    closeButton?.addEventListener('click', closeSheet);
+    sheet.addEventListener('click', (event) => {
+      if (event.target === sheet) closeSheet();
+    });
+  }
+
+  function updateFilterCountBadge() {
+    const badge = document.getElementById('filterCountBadge');
+    if (!badge || !getApp()) return;
+    const filters = getApp().getFiltersFromUI();
+    let count = 0;
+    if (filters.query) count += 1;
+    if (filters.selectedCategories?.length) count += 1;
+    if (filters.selectedMechanics?.length) count += 1;
+    if (filters.selectedBggStatus?.length) count += 1;
+    if (filters.selectedCollectionOwners?.length) count += 1;
+    if (filters.neverPlayedOnly) count += 1;
+    if (filters.selectedPlayerFilter && filters.selectedPlayerFilter !== 'any') count += 1;
+    if (filters.selectedWeight?.length) count += 1;
+    if (filters.selectedPlayingTime?.length) count += 1;
+    if (filters.selectedPreviousPlayers?.length) count += 1;
+    if (filters.selectedMinAge) count += 1;
+    if (filters.selectedNumPlays) count += 1;
+    badge.hidden = count === 0;
+    badge.textContent = String(count);
+  }
+
+  function shuffleGames(games) {
+    const pool = [...games];
+    for (let index = pool.length - 1; index > 0; index -= 1) {
+      const swapIndex = Math.floor(Math.random() * (index + 1));
+      [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
+    }
+    return pool;
+  }
+
+  function getBothOfUsNames() {
+    const owners = [];
+    getApp().getAllGames().forEach(game => {
+      (game.collection_owners || []).forEach(owner => {
+        if (owner && !owners.includes(owner)) owners.push(owner);
+      });
+    });
+    if (owners.length >= 2) return owners.slice(0, 2);
+    return ['Player 1', 'Player 2'];
+  }
+
+  const bothOfUs = {
+    names: ['Player 1', 'Player 2'],
+    pool: [],
+    index: 0,
+    turn: 0,
+    passCount: 0,
+  };
+
+  function renderBothOfUs() {
+    if (bothOfUs.pool.length === 1) {
+      showPickedGame(bothOfUs.pool[0], 'Both of you');
+      return;
+    }
+    if (!bothOfUs.pool.length) {
+      openModal('Both of us', '<p>You vetoed everything. Try wider filters.</p>');
+      return;
+    }
+    const game = bothOfUs.pool[bothOfUs.index];
+    const playerName = bothOfUs.names[bothOfUs.turn];
+    openModal('Both of us', `
+      <div class="bothOfUsCard">
+        <p class="bothOfUsTurn">${escapeHtml(playerName)} — keep or veto?</p>
+        <img src="${escapeHtml(game.image)}" alt="${escapeHtml(game.name)}">
+        <h3>${escapeHtml(game.name)}</h3>
+        <p>${escapeHtml(game.playing_time || 'Unknown duration')} · ${escapeHtml(getApp().getComplexityName(game.weight) || 'Unknown weight')}</p>
+        <p>${bothOfUs.pool.length} games left</p>
+        <div class="bothOfUsActions">
+          <button type="button" class="secondary-btn" id="bothOfUsVeto">Veto</button>
+          <button type="button" class="primary-btn" id="bothOfUsHeart">Heart</button>
+        </div>
+      </div>
+    `);
+    document.getElementById('bothOfUsVeto').onclick = () => {
+      bothOfUs.pool.splice(bothOfUs.index, 1);
+      bothOfUs.passCount = 0;
+      if (bothOfUs.pool.length) bothOfUs.index %= bothOfUs.pool.length;
+      bothOfUs.turn = 1 - bothOfUs.turn;
+      renderBothOfUs();
+    };
+    document.getElementById('bothOfUsHeart').onclick = () => {
+      bothOfUs.passCount += 1;
+      if (bothOfUs.passCount >= bothOfUs.pool.length) {
+        showPickedGame(pickRandomGame(bothOfUs.pool), 'Both of you kept these');
+        return;
+      }
+      bothOfUs.index = (bothOfUs.index + 1) % bothOfUs.pool.length;
+      bothOfUs.turn = 1 - bothOfUs.turn;
+      renderBothOfUs();
+    };
+  }
+
+  function setupBothOfUs() {
+    const button = document.getElementById('bothOfUsBtn');
     if (!button) return;
     button.addEventListener('click', () => {
-      renderSavedNightsModal();
+      const matches = getApp().getFilteredGames();
+      if (matches.length < 2) {
+        openModal('Both of us', '<p>Need at least two matching games. Widen the filters.</p>');
+        return;
+      }
+      bothOfUs.names = getBothOfUsNames();
+      bothOfUs.pool = shuffleGames(matches);
+      bothOfUs.index = 0;
+      bothOfUs.turn = 0;
+      bothOfUs.passCount = 0;
+      renderBothOfUs();
     });
-    loadSavedNights();
   }
 
   function setupViewToggle() {
@@ -765,11 +829,12 @@
   function waitForAppReady() {
     if (window.gameCacheApp?.getAllGames()?.length) {
       setupRandomPicker();
-      setupTonightWizard();
       setupStatsButton();
       setupCompare();
       setupSavedNights();
       setupViewToggle();
+      setupFilterSheet();
+      setupBothOfUs();
       loadPersonalNotes().then(() => enhanceVisibleGames());
       return;
     }
@@ -778,6 +843,7 @@
 
   window.gameCacheFeatures = {
     enhanceRenderedGames,
+    updateFilterCountBadge,
   };
 
   waitForAppReady();

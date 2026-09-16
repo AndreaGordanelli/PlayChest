@@ -17,7 +17,6 @@ Build a searchable, filterable site for your BoardGameGeek collection: download 
 - [x] Local database served by nginx
 - [x] Automatic and manual sync from admin
 - [x] Random game picker
-- [x] “What should we play tonight?” wizard
 - [x] Shareable URLs with filters and sort
 - [x] Collection statistics dashboard
 - [x] “Never played” filter
@@ -31,6 +30,7 @@ Build a searchable, filterable site for your BoardGameGeek collection: download 
 - [x] Side-by-side game comparison
 - [x] Saved nights (named filter presets)
 - [x] Expansions grouped under the base game
+- [x] Both of us picker
 
 ### Coming next
 
@@ -103,7 +103,7 @@ Set `0` to disable scheduled updates.
 
 ## Current features
 
-- Random game picker and “What should we play tonight?” wizard
+- Random game picker
 - Shareable URLs (search, filters, sort, view)
 - Collection statistics and a “never played” shortcut
 - BGG status filters and multi-collection
@@ -113,11 +113,16 @@ Set `0` to disable scheduled updates.
 - Installable PWA with offline browsing of the cached collection
 - Side-by-side game comparison
 - Saved nights and expansion grouping
+- Both of us picker
 - Admin and health checks
+
+### Both of us
+
+Two players take turns on games that match the current filters. Heart keeps it in the pool, Veto removes it. When one game remains, that is the pick. Names come from the imported BGG collections when two owners exist.
 
 ### Saved nights
 
-Open **Nights** in the toolbar, name the current filters, and save. Apply a night later to restore that search, player count, weight, and the rest. Example names: “2 players”, “fillers”, “heavy weekend”. Nights are stored in the browser and on the server (`/api/nights`).
+Open **Night** in the toolbar, name the current filters, and save. Apply a night later to restore that search, player count, weight, and the rest. Example names: “2 players”, “fillers”, “heavy weekend”. Nights are stored in the browser and on the server (`/api/nights`).
 
 ### Expansions
 

@@ -1238,7 +1238,8 @@ function updateURLWithFilters(filters) {
 }
 
 function updateUIFromState(state) {
-  document.getElementById('search-input').value = state.query;
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = state.query;
 
   document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
 
@@ -1306,7 +1307,8 @@ function updateUIFromState(state) {
   const numPlaysRadio = document.querySelector(`input[name="numplays"][value="${numPlaysValue}"]`);
   if (numPlaysRadio) numPlaysRadio.checked = true;
 
-  document.getElementById('sort-select').value = state.sortBy;
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) sortSelect.value = state.sortBy;
   currentPage = state.page;
   currentViewMode = state.viewMode || 'grid';
   applyViewMode(currentViewMode);
@@ -1327,6 +1329,9 @@ function onFilterChange(resetPage = true) {
   applyFiltersAndSort(state);
   updateResults();
   updateStats();
+  if (window.gameCacheFeatures?.updateFilterCountBadge) {
+    window.gameCacheFeatures.updateFilterCountBadge();
+  }
 }
 
 function setupClearAllButton() {

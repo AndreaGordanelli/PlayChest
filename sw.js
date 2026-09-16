@@ -1,4 +1,4 @@
-const cacheVersion = 'playchest-v2';
+const cacheVersion = 'playchest-v4';
 const shellCacheName = `${cacheVersion}-shell`;
 const dataCacheName = `${cacheVersion}-data`;
 const imageCacheName = `${cacheVersion}-images`;

@@ -31,21 +31,27 @@
 <body>
   <div class="offline-banner" id="offlineBanner">You are offline. Browsing the cached collection.</div>
   <button type="button" class="reload-banner" id="reloadBanner" hidden>Collection updated. Click to reload.</button>
+
   <header class="search">
     <img class="logo" src="icons/meeple.svg" alt="PlayChest" height="36" width="36">
     <div class="search-box" id="search-box"></div>
     <div class="toolbar" id="toolbar">
+      <button type="button" class="toolbar-btn" id="filtersBtn" title="Filters">
+        <span class="material-symbols-rounded icon-medium">filter_list</span>
+        <span class="toolbar-label">Filters</span>
+        <span class="filterCountBadge" id="filterCountBadge" hidden></span>
+      </button>
       <button type="button" class="toolbar-btn" id="random-game-btn" title="Pick a random game">
         <span class="material-symbols-rounded icon-medium">casino</span>
         <span class="toolbar-label">Random</span>
       </button>
-      <button type="button" class="toolbar-btn" id="tonight-btn" title="What should we play tonight?">
-        <span class="material-symbols-rounded icon-medium">nightlife</span>
-        <span class="toolbar-label">Tonight</span>
-      </button>
       <button type="button" class="toolbar-btn" id="nightsBtn" title="Saved nights">
-        <span class="material-symbols-rounded icon-medium">bookmark</span>
-        <span class="toolbar-label">Nights</span>
+        <span class="material-symbols-rounded icon-medium">nights_stay</span>
+        <span class="toolbar-label">Night</span>
+      </button>
+      <button type="button" class="toolbar-btn" id="bothOfUsBtn" title="Both of us">
+        <span class="material-symbols-rounded icon-medium">favorite</span>
+        <span class="toolbar-label">Both of us</span>
       </button>
       <button type="button" class="toolbar-btn" id="stats-btn" title="Collection statistics">
         <span class="material-symbols-rounded icon-medium">bar_chart</span>
@@ -81,21 +87,31 @@
     <span id="compareBannerText">Click two games to compare</span>
     <button type="button" class="secondary-btn" id="compareBannerCancel">Cancel</button>
   </div>
+  <div class="filterSheet" id="filterSheet" hidden>
+    <div class="filterSheetPanel">
+      <div class="filterSheetHeader">
+        <h2>Filters</h2>
+        <button type="button" class="modal-close" id="filterSheetClose" aria-label="Close filters">
+          <span class="material-symbols-rounded icon-medium">close</span>
+        </button>
+      </div>
+      <aside class="facets">
+        <div id="facet-players"></div>
+        <div id="facet-playing-time"></div>
+        <div id="facet-weight"></div>
+        <div id="facet-categories"></div>
+        <div id="facet-mechanics"></div>
+        <div id="facet-bgg-status"></div>
+        <div id="facet-collection-owners"></div>
+        <div id="facet-never-played"></div>
+        <div id="facet-min-age"></div>
+        <div id="facet-previous-players"></div>
+        <div id="facet-numplays"></div>
+        <div class="clear-all" id="clear-all"></div>
+      </aside>
+    </div>
+  </div>
   <article class="wrapper">
-    <aside class="facets">
-      <div id="facet-players"></div>
-      <div id="facet-playing-time"></div>
-      <div id="facet-weight"></div>
-      <div id="facet-categories"></div>
-      <div id="facet-mechanics"></div>
-      <div id="facet-bgg-status"></div>
-      <div id="facet-collection-owners"></div>
-      <div id="facet-never-played"></div>
-      <div id="facet-min-age"></div>
-      <div id="facet-previous-players"></div>
-      <div id="facet-numplays"></div>
-      <div class="clear-all" id="clear-all"></div>
-    </aside>
     <main class="results">
       <div class="hits" id="hits">
         <div class="loading">Loading database...</div>

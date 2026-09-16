@@ -114,6 +114,74 @@ body {
     display: flex;
     align-items: center;
     padding: 1em;
+    flex-wrap: wrap;
+    gap: 0.5em;
+}
+
+.filterSheetHeader h2 {
+    font-size: 0.95rem;
+    text-transform: none;
+    color: var(--colorTextStrong);
+}
+
+.filterSheet {
+    position: fixed;
+    inset: 0;
+    background: var(--colorOverlay);
+    z-index: 40;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.filterSheet[hidden] {
+    display: none;
+}
+
+.filterSheetPanel {
+    width: min(420px, 100%);
+    height: 100%;
+    overflow: auto;
+    background: var(--colorBg);
+    padding: 1em;
+    box-shadow: -8px 0 24px var(--colorShadow);
+}
+
+.filterSheetHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75em;
+}
+
+.filterCountBadge {
+    min-width: 1.2em;
+    padding: 0.1em 0.4em;
+    border-radius: 999px;
+    background: var(--colorAccent);
+    color: var(--colorOnAccent);
+    font-size: 0.75em;
+}
+
+.bothOfUsCard {
+    display: grid;
+    gap: 0.85em;
+    justify-items: center;
+    text-align: center;
+}
+
+.bothOfUsCard img {
+    width: min(240px, 70vw);
+    border-radius: 8px;
+}
+
+.bothOfUsTurn {
+    font-size: 0.95rem;
+    color: var(--colorAccent);
+}
+
+.bothOfUsActions {
+    display: flex;
+    gap: 0.6em;
 }
 
 .wrapper {
@@ -294,20 +362,39 @@ body {
 
 .game-summary {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 130px;
+    height: auto;
     margin: 0;
-    padding: 10px 15px;
+    padding: 10px 12px 12px;
     position: relative;
     list-style: none;
+}
+
+.gameSummaryMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15em;
+    min-width: 0;
+    width: 100%;
+    margin-top: 0.45em;
+    text-align: center;
+}
+
+.gameSummaryName {
+    font-weight: 600;
+    color: var(--colorTextStrong);
+    font-size: 0.82rem;
+    line-height: 1.25;
 }
 
 .game-image {
     display: block;
     margin: 0;
     max-width: 100%;
-    max-height: 100%;
+    max-height: 130px;
     border: 1px solid var(--colorImageBorder);
     border-radius: 5px;
     box-shadow: 3px 3px 15px var(--colorShadow);
@@ -1024,9 +1111,8 @@ body {
 }
 
 .game-grid.view-list .game-card::after {
-    content: attr(data-game-name);
-    padding: 0 0.75em;
-    font-size: 0.95rem;
+    display: none;
+    content: none;
 }
 
 .game-grid.view-compact {
@@ -1040,6 +1126,7 @@ body {
 
 .game-grid.view-compact .game-image {
     box-shadow: none;
+    max-height: 84px;
 }
 
 .admin-header-actions {
@@ -1415,15 +1502,10 @@ html.is-compare-mode .game-card.is-compare-selected .game-image {
     }
 }
 
-.gameSummaryMeta {
-    display: none;
-    min-width: 0;
-}
-
 .expansionStack {
     position: absolute;
     right: 8px;
-    bottom: 8px;
+    bottom: 2.8em;
     display: flex;
     align-items: center;
     pointer-events: none;
@@ -1479,6 +1561,7 @@ html.is-compare-mode .game-card.is-compare-selected .game-image {
 }
 
 .game-grid.view-list .game-summary {
+    flex-direction: row;
     width: 100%;
     height: auto;
     min-height: 90px;
@@ -1499,6 +1582,13 @@ html.is-compare-mode .game-card.is-compare-selected .game-image {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.2em;
+    text-align: left;
+    margin-top: 0;
+}
+
+.game-grid.view-compact .gameSummaryMeta,
+.game-grid.view-compact .expansionStackThumb {
+    display: none;
 }
 
 .game-grid.view-list .gameSummaryName {
