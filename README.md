@@ -28,11 +28,11 @@ Build a searchable, filterable site for your BoardGameGeek collection: download 
 - [x] Health endpoints and admin page (`/admin.html`)
 - [x] Dark theme
 - [x] PWA / offline browsing
+- [x] Side-by-side game comparison
 
 ### Coming next
 
 - [ ] Filters by publisher, designer, and year
-- [ ] Side-by-side game comparison
 - [ ] CSV/JSON export of the filtered collection
 - [ ] Sync-complete notifications (webhook / Telegram)
 - [ ] HTTPS-ready reverse proxy (Caddy/Traefik)
@@ -109,6 +109,7 @@ Set `0` to disable scheduled updates.
 - Personal notes and tags via `/api/notes`
 - Dark theme (manual toggle, with system preference as the default)
 - Installable PWA with offline browsing of the cached collection
+- Side-by-side game comparison
 - Admin and health checks
 
 ### Multi-collection
@@ -123,6 +124,8 @@ Or:
 ```ini
 bgg_usernames = alice, bob
 ```
+
+You can also add or remove BGG usernames from `/admin.html` without restarting Docker. Remove runs a sync so those games leave the site. Usernames listed in `config.ini` stay in the file; Admin skips them until you add them again. The **Collection** filter appears when more than one owner is imported.
 
 ### Dark theme
 

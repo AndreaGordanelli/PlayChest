@@ -36,6 +36,16 @@
     </header>
 
     <section class="admin-card">
+      <h2>BGG collections</h2>
+      <p class="admin-help">Add or remove BoardGameGeek usernames here. No Docker restart is needed. Remove runs a sync so those games leave the collection. Names from config.ini stay in the file; Admin just skips them until you add them again.</p>
+      <ul class="admin-username-list" id="adminUsernameList"></ul>
+      <form class="admin-username-form" id="adminUsernameForm">
+        <input type="text" id="adminUsernameInput" placeholder="BGG username" autocomplete="off" spellcheck="false">
+        <button type="submit" class="primary-btn" id="admin-username-add-btn">Add and sync</button>
+      </form>
+    </section>
+
+    <section class="admin-card">
       <h2>Sync status</h2>
       <dl class="admin-status-list">
         <dt>Database ready</dt><dd id="admin-db-ready">Checking...</dd>

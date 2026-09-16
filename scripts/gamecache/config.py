@@ -50,7 +50,7 @@ def create_nested_config(config):
             "title": config["title"]
         },
         "boardgamegeek": {
-            "user_name": config["bgg_username"],
+            "user_name": (get_bgg_usernames(config) or [config.get("bgg_username", "")])[0],
             "user_names": get_bgg_usernames(config),
         }
     }

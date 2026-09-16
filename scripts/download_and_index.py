@@ -141,6 +141,7 @@ def _run_index(args, SETTINGS):
     )
     extra_params = SETTINGS["boardgamegeek"].get("extra_params", {"own": 1})
     user_names = SETTINGS["boardgamegeek"].get("user_names") or [SETTINGS["boardgamegeek"]["user_name"]]
+    print(f"Importing BoardGameGeek collections for: {', '.join(user_names)}")
     collection = load_merged_collection(
         downloader,
         user_names=user_names,

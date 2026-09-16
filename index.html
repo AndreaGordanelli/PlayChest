@@ -30,6 +30,7 @@
 </head>
 <body>
   <div class="offline-banner" id="offlineBanner">You are offline. Browsing the cached collection.</div>
+  <button type="button" class="reload-banner" id="reloadBanner" hidden>Collection updated. Click to reload.</button>
   <header class="search">
     <img class="logo" src="icons/meeple.svg" alt="Red meeple logo" height="36" width="36">
     <div class="search-box" id="search-box"></div>
@@ -45,6 +46,10 @@
       <button type="button" class="toolbar-btn" id="stats-btn" title="Collection statistics">
         <span class="material-symbols-rounded icon-medium">bar_chart</span>
         <span class="toolbar-label">Stats</span>
+      </button>
+      <button type="button" class="toolbar-btn" id="compareBtn" title="Compare two games">
+        <span class="material-symbols-rounded icon-medium">compare</span>
+        <span class="toolbar-label">Compare</span>
       </button>
       <button type="button" class="toolbar-btn theme-toggle" id="themeToggle" title="Switch to dark theme" aria-label="Switch to dark theme">
         <span class="material-symbols-rounded icon-medium theme-icon-light">dark_mode</span>
@@ -68,6 +73,10 @@
     </div>
     <div class="stats" id="stats"></div>
   </header>
+  <div class="compareBanner" id="compareBanner" hidden>
+    <span id="compareBannerText">Click two games to compare</span>
+    <button type="button" class="secondary-btn" id="compareBannerCancel">Cancel</button>
+  </div>
   <article class="wrapper">
     <aside class="facets">
       <div id="facet-players"></div>
@@ -271,7 +280,7 @@
   </template>
 
   <div class="modal-overlay" id="feature-modal" hidden>
-    <div class="modal-panel" role="dialog" aria-modal="true">
+      <div class="modal-panel" id="featureModalPanel" role="dialog" aria-modal="true">
       <div class="modal-header">
         <h2 id="feature-modal-title"></h2>
         <button type="button" class="modal-close" id="feature-modal-close" aria-label="Close">

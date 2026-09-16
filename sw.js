@@ -1,4 +1,4 @@
-const cacheVersion = 'gamecache-v1';
+const cacheVersion = 'gamecache-v4';
 const shellCacheName = `${cacheVersion}-shell`;
 const dataCacheName = `${cacheVersion}-data`;
 const imageCacheName = `${cacheVersion}-images`;
@@ -51,7 +51,7 @@ async function cacheFirst(request, cacheName) {
 async function networkFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'reload' });
     if (response && response.ok) {
       cache.put(request, response.clone());
     }

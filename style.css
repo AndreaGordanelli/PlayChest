@@ -1080,8 +1080,44 @@ body {
     margin: 0 0 1em;
 }
 
-.admin-error {
-    color: var(--colorAccent);
+.admin-help {
+    margin: 0 0 0.9em;
+    color: var(--colorTextMuted);
+}
+
+.admin-username-list {
+    list-style: none;
+    margin: 0 0 0.9em;
+    padding: 0;
+    display: grid;
+    gap: 0.4em;
+}
+
+.admin-username-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75em;
+    padding: 0.45em 0.65em;
+    border: 1px solid var(--colorBorderSubtle);
+    border-radius: 6px;
+    background: var(--colorBgMuted);
+}
+
+.admin-username-form {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+.admin-username-form input {
+    flex: 1 1 12em;
+    box-sizing: border-box;
+    border: 1px solid var(--colorBorder);
+    border-radius: 5px;
+    padding: 0.55em;
+    background: var(--colorSurface);
+    color: var(--colorText);
 }
 
 .admin-links {
@@ -1112,6 +1148,22 @@ html.is-offline .offline-banner {
     display: block;
 }
 
+.reload-banner {
+    display: none;
+    width: 100%;
+    border: 0;
+    background: var(--colorAccent);
+    color: var(--colorOnAccent);
+    text-align: center;
+    padding: 0.55em 1em;
+    font-size: 0.95em;
+    cursor: pointer;
+}
+
+.reload-banner:not([hidden]) {
+    display: block;
+}
+
 .theme-toggle .theme-icon-dark,
 html[data-theme="dark"] .theme-toggle .theme-icon-light {
     display: none;
@@ -1126,7 +1178,8 @@ html[data-theme="dark"] .theme-toggle .theme-icon-dark {
 .tonight-form input,
 .tonight-form select,
 .personal-note-input,
-.personal-tag-input {
+.personal-tag-input,
+.compareSearchInput {
     background: var(--colorSurface);
     color: var(--colorText);
 }
@@ -1142,4 +1195,222 @@ html[data-theme="dark"] .game-title {
 
 html[data-theme="dark"] .highlight {
     color: #1a1a1a;
+}
+
+.modal-panel.is-wide {
+    width: min(880px, 100%);
+}
+
+.compareBanner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75em;
+    flex-wrap: wrap;
+    padding: 0.5em 1em;
+    background: var(--colorAccentSoft);
+    color: var(--colorTextStrong);
+    font-size: 0.95em;
+}
+
+.compareBanner[hidden] {
+    display: none;
+}
+
+html.is-compare-mode .game-card {
+    cursor: pointer;
+}
+
+html.is-compare-mode .game-card.is-compare-selected .game-image {
+    outline: 3px solid var(--colorAccent);
+    outline-offset: 2px;
+}
+
+.compareTool {
+    display: grid;
+    gap: 1.1em;
+}
+
+.comparePickers {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: "left swap right";
+    gap: 0.75em;
+    align-items: start;
+}
+
+.comparePicker[data-slot="0"] {
+    grid-area: left;
+}
+
+.comparePicker[data-slot="1"] {
+    grid-area: right;
+}
+
+.compareSwapBtn {
+    grid-area: swap;
+    align-self: center;
+}
+
+.comparePickerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5em;
+    margin-bottom: 0.4em;
+}
+
+.compareClearBtn {
+    padding: 0.3em 0.65em;
+    font-size: 0.85em;
+}
+
+.compareSearchInput {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--colorBorder);
+    border-radius: 5px;
+    padding: 0.55em;
+}
+
+.comparePicker {
+    position: relative;
+}
+
+.compareSuggestions {
+    list-style: none;
+    margin: 0.35em 0 0;
+    padding: 0;
+    border: 1px solid var(--colorBorder);
+    border-radius: 5px;
+    background: var(--colorSurface);
+    max-height: 220px;
+    overflow: auto;
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    box-shadow: 0 8px 20px var(--colorShadow);
+}
+
+.compareSuggestion {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    padding: 0.5em 0.7em;
+    cursor: pointer;
+}
+
+.compareSuggestion:hover {
+    background: var(--colorAccentSoft);
+}
+
+.comparePickedCard {
+    display: flex;
+    align-items: center;
+    gap: 0.65em;
+    margin-top: 0.75em;
+}
+
+.comparePickedCard img {
+    width: 52px;
+    height: 52px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--colorImageBorder);
+}
+
+.compareEmpty,
+.compareHint,
+.compareMuted {
+    color: var(--colorTextMuted);
+    font-style: italic;
+}
+
+.compareTable {
+    display: grid;
+    gap: 0;
+}
+
+.compareRow {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.75em;
+    padding: 0.7em 0;
+    border-bottom: 1px solid var(--colorBorderSubtle);
+}
+
+.compareHead {
+    font-weight: 600;
+    color: var(--colorTextStrong);
+}
+
+.compareLabel {
+    color: var(--colorTextMuted);
+    text-transform: uppercase;
+    font-size: 0.75em;
+    letter-spacing: 0.04em;
+    padding-top: 0.2em;
+}
+
+.compareValue {
+    min-width: 0;
+}
+
+.compareRow.is-diff .compareValue {
+    color: var(--colorTextStrong);
+    font-weight: 500;
+}
+
+.compareChip {
+    display: inline-block;
+    margin: 0 0.3em 0.3em 0;
+    padding: 0.15em 0.5em;
+    border-radius: 999px;
+    font-size: 0.85em;
+    background: var(--colorChip);
+}
+
+.compareChip.is-shared {
+    background: var(--colorAccentSoft);
+    color: var(--colorAccent);
+}
+
+.compareChip.is-unique {
+    background: var(--colorChip);
+}
+
+.compareLegend {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+    margin: 0.9em 0 0;
+    color: var(--colorTextMuted);
+}
+
+@media screen and (max-width: 640px) {
+    .comparePickers {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "left"
+            "swap"
+            "right";
+    }
+
+    .compareSwapBtn {
+        justify-self: center;
+    }
+
+    .compareRow,
+    .compareHead {
+        grid-template-columns: 1fr;
+        gap: 0.25em;
+    }
+
+    .compareLabel {
+        margin-top: 0.35em;
+    }
 }

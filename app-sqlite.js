@@ -118,21 +118,51 @@ function loadINI(path, callback) {
     .catch(error => console.error('Error loading config:', error));
 }
 
+async function getDatabaseUrl() {
+  try {
+    const status = await fetch('/api/status', { cache: 'no-store' }).then(response => response.json());
+    const version = encodeURIComponent(status.updatedAt || Date.now());
+    watchForCollectionUpdates(status.updatedAt);
+    return `./gamecache.sqlite.gz?v=${version}`;
+  } catch (error) {
+    return `./gamecache.sqlite.gz?v=${Date.now()}`;
+  }
+}
+
+function watchForCollectionUpdates(currentUpdatedAt) {
+  if (!currentUpdatedAt) return;
+  setInterval(async () => {
+    try {
+      const status = await fetch('/api/status', { cache: 'no-store' }).then(response => response.json());
+      if (status.status === 'completed' && status.updatedAt && status.updatedAt !== currentUpdatedAt) {
+        showReloadBanner();
+      }
+    } catch (error) {
+      // Ignore polling errors while browsing offline.
+    }
+  }, 10000);
+}
+
+function showReloadBanner() {
+  const banner = document.getElementById('reloadBanner');
+  if (banner) banner.hidden = false;
+}
+
 async function initializeDatabase(settings) {
   try {
     const SQL = await initSqlJs({
       locateFile: file => `./vendor/${file}`
     });
 
-    const dbUrl = './gamecache.sqlite.gz';
+    const dbUrl = await getDatabaseUrl();
 
     console.log(`Loading database from: ${dbUrl}`);
 
-    let response = await fetch(dbUrl);
+    let response = await fetch(dbUrl, { cache: 'no-store' });
     if (!response.ok) {
       const legacyDbUrl = './mybgg.sqlite.gz';
       console.warn(`Primary database URL failed (${dbUrl}), trying legacy local file: ${legacyDbUrl}`);
-      response = await fetch(legacyDbUrl);
+      response = await fetch(legacyDbUrl, { cache: 'no-store' });
     }
     if (!response.ok) {
       throw new Error(`Failed to fetch database: ${response.status} ${response.statusText}`);
@@ -200,6 +230,17 @@ function parsePlayerCount(countStr) {
   return { min: 0, max: 0, open: false };
 }
 
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 function loadAllGames() {
   const stmt = db.prepare(`
     SELECT id, name, description, categories, mechanics, players, weight,
@@ -214,18 +255,13 @@ function loadAllGames() {
     const row = stmt.getAsObject();
 
     row.weight = parseFloat(row.weight);
-
-    try {
-      row.categories = JSON.parse(row.categories || '[]');
-      row.mechanics = JSON.parse(row.mechanics || '[]');
-      row.players = JSON.parse(row.players || '[]');
-      row.tags = JSON.parse(row.tags || '[]');
-      row.collection_owners = JSON.parse(row.collection_owners || '[]');
-      row.previous_players = JSON.parse(row.previous_players || '[]');
-      row.expansions = JSON.parse(row.expansions || '[]');
-    } catch (e) {
-      console.warn('Error parsing JSON for game:', row.id, e);
-    }
+    row.categories = parseJsonArray(row.categories);
+    row.mechanics = parseJsonArray(row.mechanics);
+    row.players = parseJsonArray(row.players);
+    row.tags = parseJsonArray(row.tags);
+    row.collection_owners = parseJsonArray(row.collection_owners);
+    row.previous_players = parseJsonArray(row.previous_players);
+    row.expansions = parseJsonArray(row.expansions);
 
     allGames.push(row);
   }
@@ -2240,6 +2276,10 @@ loadINI('./config.ini', function (settings) {
   init(settings);
 });
 
+document.getElementById('reloadBanner')?.addEventListener('click', () => {
+  window.location.reload();
+});
+
 window.gameCacheApp = {
   getAllGames: () => allGames,
   getFilteredGames: () => filteredGames,
@@ -2254,6 +2294,8 @@ window.gameCacheApp = {
   updateStats,
   renderGameCard,
   getComplexityName,
+  formatPlayerCount,
+  formatPlayerCountShort,
   CONFIG,
   BGG_STATUS_OPTIONS,
   openGameCard(gameId) {

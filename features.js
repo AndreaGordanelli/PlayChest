@@ -1,25 +1,30 @@
 (() => {
   const modal = document.getElementById('feature-modal');
+  const modalPanel = document.getElementById('featureModalPanel');
   const modalTitle = document.getElementById('feature-modal-title');
   const modalBody = document.getElementById('feature-modal-body');
   const modalClose = document.getElementById('feature-modal-close');
   let personalNotes = {};
   let notesLoaded = false;
   let notesSaveTimer = null;
+  let compareModeActive = false;
+  const compareGameIds = [null, null];
 
   function getApp() {
     return window.gameCacheApp;
   }
 
-  function openModal(title, html) {
+  function openModal(title, html, options = {}) {
     modalTitle.textContent = title;
     modalBody.innerHTML = html;
+    modalPanel.classList.toggle('is-wide', Boolean(options.wide));
     modal.hidden = false;
   }
 
   function closeModal() {
     modal.hidden = true;
     modalBody.innerHTML = '';
+    modalPanel.classList.remove('is-wide');
   }
 
   modalClose.addEventListener('click', closeModal);
@@ -74,38 +79,39 @@
   }
 
   function enhanceRenderedGames(pageGames) {
-    if (!notesLoaded) return;
-    pageGames.forEach(game => {
-      const card = document.querySelector(`.game-card[data-game-id="${game.id}"]`);
-      if (!card) return;
-      const noteData = getNoteForGame(game.id);
-      const section = card.querySelector('.personal-notes-section');
-      const noteInput = card.querySelector('.personal-note-input');
-      const tagInput = card.querySelector('.personal-tag-input');
-      const tagsContainer = card.querySelector('.personal-tags');
-      const saveButton = card.querySelector('.save-note-btn');
+    if (notesLoaded) {
+      pageGames.forEach(game => {
+        const card = document.querySelector(`.game-card[data-game-id="${game.id}"]`);
+        if (!card) return;
+        const noteData = getNoteForGame(game.id);
+        const noteInput = card.querySelector('.personal-note-input');
+        const tagInput = card.querySelector('.personal-tag-input');
+        const tagsContainer = card.querySelector('.personal-tags');
+        const saveButton = card.querySelector('.save-note-btn');
 
-      tagsContainer.dataset.gameId = game.id;
-      tagsContainer.innerHTML = renderPersonalTags(noteData.customTags || []);
-      noteInput.value = noteData.note || '';
-      tagInput.value = (noteData.customTags || []).join(', ');
+        tagsContainer.dataset.gameId = game.id;
+        tagsContainer.innerHTML = renderPersonalTags(noteData.customTags || []);
+        noteInput.value = noteData.note || '';
+        tagInput.value = (noteData.customTags || []).join(', ');
 
-      saveButton.onclick = (event) => {
-        event.stopPropagation();
-        const customTags = tagInput.value
-          .split(',')
-          .map(tag => tag.trim())
-          .filter(Boolean);
-        personalNotes[String(game.id)] = {
-          note: noteInput.value.trim(),
-          customTags,
+        saveButton.onclick = (event) => {
+          event.stopPropagation();
+          const customTags = tagInput.value
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(Boolean);
+          personalNotes[String(game.id)] = {
+            note: noteInput.value.trim(),
+            customTags,
+          };
+          tagsContainer.innerHTML = renderPersonalTags(customTags);
+          savePersonalNotes();
+          saveButton.textContent = 'Saved';
+          setTimeout(() => { saveButton.textContent = 'Save note'; }, 1200);
         };
-        tagsContainer.innerHTML = renderPersonalTags(customTags);
-        savePersonalNotes();
-        saveButton.textContent = 'Saved';
-        setTimeout(() => { saveButton.textContent = 'Save note'; }, 1200);
-      };
-    });
+      });
+    }
+    refreshCompareSelection();
   }
 
   function pickRandomGame(games) {
@@ -292,6 +298,319 @@
     document.getElementById('stats-btn').addEventListener('click', renderStatsDashboard);
   }
 
+  function isCompareSelected(gameId) {
+    return compareGameIds.includes(String(gameId));
+  }
+
+  function getGameById(gameId) {
+    if (!gameId) return null;
+    return getApp().getAllGames().find(game => String(game.id) === String(gameId)) || null;
+  }
+
+  function formatPlayers(players) {
+    if (typeof getApp().formatPlayerCount === 'function') {
+      return getApp().formatPlayerCount(players || []) || 'Unknown';
+    }
+    if (!players || !players.length) return 'Unknown';
+    return players.map(([count, type]) => {
+      const suffix = type === 'best' ? ' (best)' : type === 'recommended' ? ' (rec.)' : '';
+      return count + suffix;
+    }).join(', ') || 'Unknown';
+  }
+
+  function updateCompareBanner() {
+    const text = document.getElementById('compareBannerText');
+    if (!text) return;
+    const count = compareGameIds.filter(Boolean).length;
+    text.textContent = count === 1
+      ? 'Select a second game to compare'
+      : 'Click two games to compare';
+  }
+
+  function setCompareMode(active) {
+    compareModeActive = active;
+    document.documentElement.classList.toggle('is-compare-mode', active);
+    const banner = document.getElementById('compareBanner');
+    if (banner) banner.hidden = !active;
+    const toolbarBtn = document.getElementById('compareBtn');
+    if (toolbarBtn) toolbarBtn.classList.toggle('is-active', active || compareGameIds.some(Boolean));
+    if (active) updateCompareBanner();
+  }
+
+  function exitCompareMode() {
+    compareGameIds[0] = null;
+    compareGameIds[1] = null;
+    setCompareMode(false);
+    refreshCompareSelection();
+  }
+
+  function refreshCompareSelection() {
+    document.querySelectorAll('.game-card').forEach(card => {
+      card.classList.toggle('is-compare-selected', isCompareSelected(card.dataset.gameId));
+    });
+    const toolbarBtn = document.getElementById('compareBtn');
+    if (toolbarBtn) {
+      toolbarBtn.classList.toggle('is-active', compareModeActive || compareGameIds.some(Boolean));
+    }
+  }
+
+  function updateComparePicker(slot) {
+    const picker = modalBody.querySelector(`.comparePicker[data-slot="${slot}"]`);
+    if (!picker) return;
+    const selected = getGameById(compareGameIds[slot]);
+    picker.querySelector('.comparePicked').innerHTML = selected
+      ? renderPickedGame(selected)
+      : '<p class="compareEmpty">No game selected</p>';
+  }
+
+  function setCompareGame(slot, game) {
+    if (game && compareGameIds[1 - slot] === String(game.id)) {
+      compareGameIds[1 - slot] = null;
+    }
+    compareGameIds[slot] = game ? String(game.id) : null;
+    refreshCompareSelection();
+    updateComparePicker(0);
+    updateComparePicker(1);
+    renderCompareResult();
+  }
+
+  function pickCompareFromGrid(game) {
+    const gameId = String(game.id);
+    const existingSlot = compareGameIds.indexOf(gameId);
+    if (existingSlot >= 0) {
+      setCompareGame(existingSlot, null);
+      updateCompareBanner();
+      return;
+    }
+    const emptySlot = compareGameIds.findIndex(id => !id);
+    setCompareGame(emptySlot === -1 ? 1 : emptySlot, game);
+    if (compareGameIds[0] && compareGameIds[1]) {
+      setCompareMode(false);
+      openCompareModal();
+      return;
+    }
+    updateCompareBanner();
+  }
+
+  function searchGames(query) {
+    const needle = query.trim().toLowerCase();
+    const matches = [];
+    const seen = new Set();
+    const consider = (games) => {
+      games.forEach(game => {
+        if (seen.has(game.id)) return;
+        if (needle && !game.name.toLowerCase().includes(needle)) return;
+        seen.add(game.id);
+        matches.push(game);
+      });
+    };
+    consider(getApp().getFilteredGames());
+    consider(getApp().getAllGames());
+    return matches.slice(0, 12);
+  }
+
+  function renderPickedGame(game) {
+    return `
+      <div class="comparePickedCard">
+        <img src="${escapeHtml(game.image)}" alt="${escapeHtml(game.name)}">
+        <strong>${escapeHtml(game.name)}</strong>
+      </div>
+    `;
+  }
+
+  function renderMechanicChips(mechanics, extraClass) {
+    return mechanics.map(mechanic => (
+      `<span class="compareChip ${extraClass}">${escapeHtml(mechanic)}</span>`
+    )).join('');
+  }
+
+  function renderMechanicColumn(shared, unique) {
+    if (!shared.length && !unique.length) return '<span class="compareMuted">None</span>';
+    return `${renderMechanicChips(shared, 'is-shared')}${renderMechanicChips(unique, 'is-unique')}`;
+  }
+
+  function renderCompareResult() {
+    const result = document.getElementById('compareResult');
+    if (!result) return;
+    const left = getGameById(compareGameIds[0]);
+    const right = getGameById(compareGameIds[1]);
+    if (!left || !right) {
+      result.innerHTML = '<p class="compareHint">Pick two games to compare players, playing time, complexity, and mechanics.</p>';
+      return;
+    }
+
+    const app = getApp();
+    const leftPlayers = formatPlayers(left.players);
+    const rightPlayers = formatPlayers(right.players);
+    const leftTime = left.playing_time || 'Unknown';
+    const rightTime = right.playing_time || 'Unknown';
+    const leftWeightName = app.getComplexityName(left.weight) || 'Unknown';
+    const rightWeightName = app.getComplexityName(right.weight) || 'Unknown';
+    const leftWeight = Number.isFinite(left.weight) ? `${leftWeightName} (${left.weight.toFixed(1)})` : leftWeightName;
+    const rightWeight = Number.isFinite(right.weight) ? `${rightWeightName} (${right.weight.toFixed(1)})` : rightWeightName;
+    const leftMechanics = left.mechanics || [];
+    const rightMechanics = right.mechanics || [];
+    const rightSet = new Set(rightMechanics);
+    const leftSet = new Set(leftMechanics);
+    const shared = leftMechanics.filter(mechanic => rightSet.has(mechanic)).sort();
+    const onlyLeft = leftMechanics.filter(mechanic => !rightSet.has(mechanic)).sort();
+    const onlyRight = rightMechanics.filter(mechanic => !leftSet.has(mechanic)).sort();
+
+    const row = (label, leftValue, rightValue, isHtml = false) => {
+      const differs = !isHtml && leftValue !== rightValue;
+      return `
+        <div class="compareRow${differs ? ' is-diff' : ''}">
+          <div class="compareLabel">${escapeHtml(label)}</div>
+          <div class="compareValue">${isHtml ? leftValue : escapeHtml(leftValue)}</div>
+          <div class="compareValue">${isHtml ? rightValue : escapeHtml(rightValue)}</div>
+        </div>
+      `;
+    };
+
+    result.innerHTML = `
+      <div class="compareTable">
+        <div class="compareRow compareHead">
+          <div></div>
+          <div>${escapeHtml(left.name)}</div>
+          <div>${escapeHtml(right.name)}</div>
+        </div>
+        ${row('Players', leftPlayers, rightPlayers)}
+        ${row('Playing time', leftTime, rightTime)}
+        ${row('Complexity', leftWeight, rightWeight)}
+        ${row(
+          'Mechanics',
+          renderMechanicColumn(shared, onlyLeft),
+          renderMechanicColumn(shared, onlyRight),
+          true
+        )}
+      </div>
+      <p class="compareLegend">
+        <span class="compareChip is-shared">Shared</span>
+        <span class="compareChip is-unique">Only on this game</span>
+      </p>
+    `;
+  }
+
+  function hideSuggestions(picker) {
+    const list = picker.querySelector('.compareSuggestions');
+    list.hidden = true;
+    list.innerHTML = '';
+  }
+
+  function showSuggestions(picker, games) {
+    const list = picker.querySelector('.compareSuggestions');
+    if (!games.length) {
+      hideSuggestions(picker);
+      return;
+    }
+    list.innerHTML = games.map(game => (
+      `<li><button type="button" class="compareSuggestion" data-game-id="${escapeHtml(String(game.id))}">${escapeHtml(game.name)}</button></li>`
+    )).join('');
+    list.hidden = false;
+  }
+
+  function selectSuggestion(picker, slot, gameId) {
+    const game = getGameById(gameId);
+    if (!game) return;
+    const input = picker.querySelector('.compareSearchInput');
+    input.value = '';
+    hideSuggestions(picker);
+    setCompareGame(slot, game);
+  }
+
+  function bindCompareModal() {
+    modalBody.querySelectorAll('.comparePicker').forEach(picker => {
+      const slot = Number(picker.dataset.slot);
+      const input = picker.querySelector('.compareSearchInput');
+      const list = picker.querySelector('.compareSuggestions');
+
+      const refreshList = () => showSuggestions(picker, searchGames(input.value));
+      input.addEventListener('focus', refreshList);
+      input.addEventListener('input', refreshList);
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          hideSuggestions(picker);
+          return;
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          const first = list.querySelector('.compareSuggestion');
+          if (first) selectSuggestion(picker, slot, first.dataset.gameId);
+        }
+      });
+      list.addEventListener('mousedown', (event) => {
+        const button = event.target.closest('.compareSuggestion');
+        if (!button) return;
+        event.preventDefault();
+        selectSuggestion(picker, slot, button.dataset.gameId);
+      });
+      picker.querySelector('.compareClearBtn').addEventListener('click', () => {
+        input.value = '';
+        setCompareGame(slot, null);
+      });
+    });
+    modalBody.querySelector('#compareSwapBtn').addEventListener('click', () => {
+      const [leftId, rightId] = compareGameIds;
+      compareGameIds[0] = rightId;
+      compareGameIds[1] = leftId;
+      refreshCompareSelection();
+      openCompareModal();
+    });
+  }
+
+  function openCompareModal() {
+    openModal('Compare games', `
+      <div class="compareTool">
+        <div class="comparePickers">
+          ${[0, 1].map(slot => {
+            const game = getGameById(compareGameIds[slot]);
+            return `
+              <div class="comparePicker" data-slot="${slot}">
+                <div class="comparePickerHeader">
+                  <label>Game ${slot + 1}</label>
+                  <button type="button" class="compareClearBtn secondary-btn">Clear</button>
+                </div>
+                <input type="text" class="compareSearchInput" placeholder="Type to search..." autocomplete="off" spellcheck="false">
+                <ul class="compareSuggestions" hidden></ul>
+                <div class="comparePicked">${game ? renderPickedGame(game) : '<p class="compareEmpty">No game selected</p>'}</div>
+              </div>
+            `;
+          }).join('')}
+          <button type="button" class="toolbar-btn compareSwapBtn" id="compareSwapBtn" title="Swap games">
+            <span class="material-symbols-rounded icon-medium">swap_horiz</span>
+          </button>
+        </div>
+        <div class="compareResult" id="compareResult"></div>
+      </div>
+    `, { wide: true });
+    bindCompareModal();
+    renderCompareResult();
+  }
+
+  function setupCompare() {
+    document.getElementById('compareBtn').addEventListener('click', () => {
+      if (compareModeActive) {
+        exitCompareMode();
+        return;
+      }
+      if (compareGameIds[0] && compareGameIds[1]) {
+        openCompareModal();
+        return;
+      }
+      setCompareMode(true);
+    });
+    document.getElementById('compareBannerCancel').addEventListener('click', exitCompareMode);
+    document.getElementById('hits').addEventListener('click', (event) => {
+      if (!compareModeActive) return;
+      const card = event.target.closest('.game-card');
+      if (!card) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const game = getGameById(card.dataset.gameId);
+      if (game) pickCompareFromGrid(game);
+    }, true);
+  }
+
   function setupViewToggle() {
     document.querySelectorAll('.view-btn').forEach(button => {
       button.addEventListener('click', () => {
@@ -304,14 +623,22 @@
     });
   }
 
+  function enhanceVisibleGames() {
+    const visibleIds = new Set(
+      [...document.querySelectorAll('.game-card[data-game-id]')].map(card => String(card.dataset.gameId))
+    );
+    const pageGames = getApp().getAllGames().filter(game => visibleIds.has(String(game.id)));
+    enhanceRenderedGames(pageGames);
+  }
+
   function waitForAppReady() {
     if (window.gameCacheApp?.getAllGames()?.length) {
-      loadPersonalNotes().then(() => {
-        setupRandomPicker();
-        setupTonightWizard();
-        setupStatsButton();
-        setupViewToggle();
-      });
+      setupRandomPicker();
+      setupTonightWizard();
+      setupStatsButton();
+      setupCompare();
+      setupViewToggle();
+      loadPersonalNotes().then(() => enhanceVisibleGames());
       return;
     }
     setTimeout(waitForAppReady, 250);
