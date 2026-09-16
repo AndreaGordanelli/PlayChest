@@ -133,6 +133,7 @@ class BoardGame:
             "collection_owners": self.collection_owners,
             "previous_players": self.previous_players,
             "expansions": self.expansions,
+            "is_expansion": bool(getattr(self, "expansion_parent_ids", None)),
             # Add the color field, ensuring it's handled if not present
             "color": getattr(self, 'color', None)
         }

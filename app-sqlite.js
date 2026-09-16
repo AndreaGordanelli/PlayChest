@@ -106,7 +106,7 @@ function loadINI(path, callback) {
 
       // Transform flat config into nested structure expected by the app
       const settings = {
-        title: config.title || "GameCache",
+        title: config.title || "PlayChest",
         games_per_page: config.games_per_page,
         bgg: {
           username: config.bgg_username
@@ -242,13 +242,19 @@ function parseJsonArray(value) {
 }
 
 function loadAllGames() {
-  const stmt = db.prepare(`
+  const selectSql = `
     SELECT id, name, description, categories, mechanics, players, weight,
            playing_time, min_age, rank, usersrated, numowned, rating,
            numplays, image, tags, collection_owners, previous_players, expansions, color
     FROM games
     ORDER BY name
-  `);
+  `;
+  let stmt;
+  try {
+    stmt = db.prepare(selectSql.replace('expansions, color', 'expansions, color, is_expansion'));
+  } catch (error) {
+    stmt = db.prepare(selectSql);
+  }
 
   allGames = [];
   while (stmt.step()) {
@@ -262,13 +268,33 @@ function loadAllGames() {
     row.collection_owners = parseJsonArray(row.collection_owners);
     row.previous_players = parseJsonArray(row.previous_players);
     row.expansions = parseJsonArray(row.expansions);
+    row.isExpansion = Boolean(row.is_expansion);
 
     allGames.push(row);
   }
   stmt.free();
 
+  hideNestedExpansions();
   filteredGames = [...allGames];
   console.log(`Loaded ${allGames.length} games.`);
+}
+
+function hideNestedExpansions() {
+  const nestedIds = new Set();
+  const nestedNames = new Set();
+  allGames.forEach(game => {
+    (game.expansions || []).forEach(expansion => {
+      if (expansion && expansion.id != null) nestedIds.add(String(expansion.id));
+      if (expansion && expansion.name) nestedNames.add(expansion.name.trim().toLowerCase());
+    });
+  });
+  allGames = allGames.filter(game => {
+    if (game.isExpansion) return false;
+    if (nestedIds.has(String(game.id))) return false;
+    const name = (game.name || '').trim().toLowerCase();
+    if (name && nestedNames.has(name) && !(game.expansions || []).length) return false;
+    return true;
+  });
 }
 
 function prefetchCollectionImages() {
@@ -1315,6 +1341,21 @@ function setupClearAllButton() {
   clearContainer.style.display = 'none';
 }
 
+function gameMatchesQuery(game, query) {
+  if (!query) return true;
+  const needle = query.toLowerCase();
+  if (game.name.toLowerCase().includes(needle)) return true;
+  if ((game.description || '').toLowerCase().includes(needle)) return true;
+  return (game.expansions || []).some(expansion => (expansion.name || '').toLowerCase().includes(needle));
+}
+
+function expansionMatchesQuery(game, query) {
+  if (!query) return false;
+  const needle = query.toLowerCase();
+  if (game.name.toLowerCase().includes(needle)) return false;
+  return (game.expansions || []).some(expansion => (expansion.name || '').toLowerCase().includes(needle));
+}
+
 function filterGames(gamesToFilter, filters) {
   const {
     query,
@@ -1332,8 +1373,7 @@ function filterGames(gamesToFilter, filters) {
   } = filters;
 
   return gamesToFilter.filter(game => {
-    if (query && !game.name.toLowerCase().includes(query) &&
-      !game.description.toLowerCase().includes(query)) {
+    if (query && !gameMatchesQuery(game, query)) {
       return false;
     }
 
@@ -1747,6 +1787,36 @@ function renderGameCard(game) {
   summaryImg.alt = game.name;
   coverImg.src = game.image;
   coverImg.alt = game.name;
+
+  const summaryName = clone.querySelector('.gameSummaryName');
+  if (summaryName) summaryName.textContent = game.name;
+  const summaryExpansions = clone.querySelector('.gameSummaryExpansions');
+  const expansionCount = (game.expansions || []).length;
+  if (summaryExpansions) {
+    summaryExpansions.textContent = expansionCount
+      ? `${expansionCount} expansion${expansionCount === 1 ? '' : 's'}`
+      : '';
+  }
+
+  const expansionStack = clone.querySelector('.expansionStack');
+  if (expansionStack && expansionCount) {
+    expansionStack.hidden = false;
+    const thumbs = (game.expansions || [])
+      .filter(expansion => expansion.image)
+      .slice(0, 3)
+      .map(expansion => `<img class="expansionStackThumb" src="${escapeHtml(expansion.image)}" alt="">`)
+      .join('');
+    expansionStack.innerHTML = `${thumbs}<span class="expansionStackCount">+${expansionCount}</span>`;
+  }
+
+  const expansionMatchBadge = clone.querySelector('.expansionMatchBadge');
+  if (expansionMatchBadge && expansionMatchesQuery(game, getCurrentSearchQuery())) {
+    expansionMatchBadge.hidden = false;
+  }
+
+  if (game.isExpansion) {
+    card.classList.add('is-expansion');
+  }
 
   // Set title
   const title = clone.querySelector('.game-title');
@@ -2263,7 +2333,7 @@ function closeAll(event) {
 document.addEventListener("click", closeAll);
 
 function init(settings) {
-  console.log('Initializing GameCache SQLite app...');
+  console.log('Initializing PlayChest SQLite app...');
   const gamesPerPage = parseInt(settings.games_per_page, 10);
   if (gamesPerPage > 0) {
     GAMES_PER_PAGE = gamesPerPage;

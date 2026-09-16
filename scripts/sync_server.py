@@ -20,11 +20,15 @@ DATA_DIR = Path(os.environ.get("GAMECACHE_DATA_DIR", "/app/data"))
 HTML_DIR = Path(os.environ.get("GAMECACHE_HTML_DIR", "/usr/share/nginx/html"))
 DB_PATH = HTML_DIR / "gamecache.sqlite.gz"
 NOTES_PATH = DATA_DIR / "personal-notes.json"
+NIGHTS_PATH = DATA_DIR / "saved-nights.json"
 STATUS_PATH = DATA_DIR / "sync-status.json"
 USERNAMES_PATH = DATA_DIR / "bgg-usernames.json"
 SYNC_LOCK = threading.Lock()
 SYNC_RUNNING = False
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_ -]{1,50}$")
+
+
+disconnectedErrors = (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)
 
 
 def read_json(path, default):
@@ -181,16 +185,31 @@ def run_sync():
 
 
 class SyncApiHandler(BaseHTTPRequestHandler):
-    server_version = "GameCacheSync/1.0"
+    server_version = "PlayChestSync/1.0"
+
+    def handle(self):
+        try:
+            super().handle()
+        except disconnectedErrors:
+            return
+
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except disconnectedErrors:
+            return
 
     def _send_json(self, status_code, payload):
         body = json.dumps(payload).encode("utf-8")
-        self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.send_response(status_code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(body)
+        except disconnectedErrors:
+            return
 
     def _read_json_body(self):
         length = int(self.headers.get("Content-Length", "0"))
@@ -227,6 +246,14 @@ class SyncApiHandler(BaseHTTPRequestHandler):
 
         if path == "/api/notes":
             self._send_json(200, read_json(NOTES_PATH, {}))
+            return
+
+        if path == "/api/nights":
+            payload = read_json(NIGHTS_PATH, {"nights": []})
+            nights = payload.get("nights") if isinstance(payload, dict) else payload
+            if not isinstance(nights, list):
+                nights = []
+            self._send_json(200, {"nights": nights})
             return
 
         if path == "/api/usernames":
@@ -286,6 +313,30 @@ class SyncApiHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"saved": True, "notesCount": len(payload)})
             return
 
+        if path == "/api/nights":
+            payload = self._read_json_body()
+            nights = payload.get("nights") if isinstance(payload, dict) else payload
+            if not isinstance(nights, list):
+                self._send_json(400, {"error": "nights must be an array"})
+                return
+            cleaned = []
+            for night in nights:
+                if not isinstance(night, dict):
+                    continue
+                name = str(night.get("name", "")).strip()
+                filters = night.get("filters")
+                if not name or not isinstance(filters, dict):
+                    continue
+                nightId = str(night.get("id") or "").strip() or f"night-{len(cleaned) + 1}"
+                cleaned.append({
+                    "id": nightId,
+                    "name": name[:60],
+                    "filters": filters,
+                })
+            write_json(NIGHTS_PATH, {"nights": cleaned})
+            self._send_json(200, {"saved": True, "nights": cleaned})
+            return
+
         if path == "/api/usernames":
             payload = self._read_json_body()
             extraUsernames = payload.get("extraUsernames")
@@ -340,12 +391,22 @@ class SyncApiHandler(BaseHTTPRequestHandler):
         return
 
 
+class SyncApiServer(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        error = sys.exc_info()[1]
+        if isinstance(error, disconnectedErrors):
+            return
+        super().handle_error(request, client_address)
+
+
 def main():
     host = os.environ.get("GAMECACHE_SYNC_HOST", "127.0.0.1")
     port = int(os.environ.get("GAMECACHE_SYNC_PORT", "9090"))
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    server = ThreadingHTTPServer((host, port), SyncApiHandler)
-    print(f"GameCache sync API listening on http://{host}:{port}")
+    server = SyncApiServer((host, port), SyncApiHandler)
+    print(f"PlayChest sync API listening on http://{host}:{port}")
     server.serve_forever()
 
 

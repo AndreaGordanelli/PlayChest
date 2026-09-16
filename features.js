@@ -611,6 +611,137 @@
     }, true);
   }
 
+  const nightsStorageKey = 'playChestSavedNights';
+  let savedNights = [];
+
+  function snapshotFilters(filters) {
+    return {
+      query: filters.query || '',
+      selectedCategories: filters.selectedCategories || [],
+      selectedMechanics: filters.selectedMechanics || [],
+      selectedBggStatus: filters.selectedBggStatus || [],
+      selectedCollectionOwners: filters.selectedCollectionOwners || [],
+      neverPlayedOnly: Boolean(filters.neverPlayedOnly),
+      selectedPlayerFilter: filters.selectedPlayerFilter || 'any',
+      selectedWeight: filters.selectedWeight || [],
+      selectedPlayingTime: filters.selectedPlayingTime || [],
+      selectedPreviousPlayers: filters.selectedPreviousPlayers || [],
+      selectedMinAge: filters.selectedMinAge || null,
+      selectedNumPlays: filters.selectedNumPlays || null,
+      sortBy: filters.sortBy || 'name',
+      viewMode: filters.viewMode || 'grid',
+    };
+  }
+
+  function applyNightFilters(filters) {
+    const app = getApp();
+    const state = {
+      ...snapshotFilters(filters),
+      page: 1,
+    };
+    app.updateUIFromState(state);
+    app.updateURLWithFilters(state);
+    app.applyFiltersAndSort(state);
+    app.updateResults();
+    app.updateStats();
+  }
+
+  async function loadSavedNights() {
+    try {
+      const response = await fetch('/api/nights', { cache: 'no-store' });
+      if (response.ok) {
+        const payload = await response.json();
+        savedNights = Array.isArray(payload.nights) ? payload.nights : [];
+        localStorage.setItem(nightsStorageKey, JSON.stringify(savedNights));
+        return;
+      }
+    } catch (error) {
+      // fall through to localStorage
+    }
+    const localNights = localStorage.getItem(nightsStorageKey);
+    savedNights = localNights ? JSON.parse(localNights) : [];
+  }
+
+  async function persistSavedNights() {
+    localStorage.setItem(nightsStorageKey, JSON.stringify(savedNights));
+    try {
+      await fetch('/api/nights', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nights: savedNights }),
+      });
+    } catch (error) {
+      console.warn('Could not persist nights to server, kept in localStorage.', error);
+    }
+  }
+
+  function renderSavedNightsModal() {
+    const listHtml = savedNights.length
+      ? `<ul class="savedNightsList">${savedNights.map(night => `
+          <li class="savedNightItem">
+            <button type="button" class="primary-btn savedNightApplyBtn" data-night-id="${escapeHtml(night.id)}">${escapeHtml(night.name)}</button>
+            <button type="button" class="secondary-btn savedNightDeleteBtn" data-night-id="${escapeHtml(night.id)}" title="Delete ${escapeHtml(night.name)}">Delete</button>
+          </li>
+        `).join('')}</ul>`
+      : '<p class="compareHint">No saved nights yet. Set filters, name them, and save. Try names like “2 players”, “fillers”, or “heavy weekend”.</p>';
+
+    openModal('Saved nights', `
+      <div class="savedNightsTool">
+        ${listHtml}
+        <form class="savedNightsForm" id="savedNightsForm">
+          <input type="text" id="savedNightName" placeholder="Name this night" maxlength="60" autocomplete="off">
+          <button type="submit" class="primary-btn">Save current filters</button>
+        </form>
+      </div>
+    `);
+
+    document.getElementById('savedNightsForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const input = document.getElementById('savedNightName');
+      const name = input.value.trim();
+      if (!name) return;
+      const filters = snapshotFilters(getApp().getFiltersFromUI());
+      const existing = savedNights.find(night => night.name.toLowerCase() === name.toLowerCase());
+      if (existing) {
+        existing.filters = filters;
+      } else {
+        savedNights.push({
+          id: `night-${Date.now()}`,
+          name,
+          filters,
+        });
+      }
+      await persistSavedNights();
+      renderSavedNightsModal();
+    });
+
+    modalBody.querySelectorAll('.savedNightApplyBtn').forEach(button => {
+      button.addEventListener('click', () => {
+        const night = savedNights.find(item => item.id === button.dataset.nightId);
+        if (!night) return;
+        applyNightFilters(night.filters);
+        closeModal();
+      });
+    });
+
+    modalBody.querySelectorAll('.savedNightDeleteBtn').forEach(button => {
+      button.addEventListener('click', async () => {
+        savedNights = savedNights.filter(night => night.id !== button.dataset.nightId);
+        await persistSavedNights();
+        renderSavedNightsModal();
+      });
+    });
+  }
+
+  function setupSavedNights() {
+    const button = document.getElementById('nightsBtn');
+    if (!button) return;
+    button.addEventListener('click', () => {
+      renderSavedNightsModal();
+    });
+    loadSavedNights();
+  }
+
   function setupViewToggle() {
     document.querySelectorAll('.view-btn').forEach(button => {
       button.addEventListener('click', () => {
@@ -637,6 +768,7 @@
       setupTonightWizard();
       setupStatsButton();
       setupCompare();
+      setupSavedNights();
       setupViewToggle();
       loadPersonalNotes().then(() => enhanceVisibleGames());
       return;

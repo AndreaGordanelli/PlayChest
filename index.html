@@ -9,7 +9,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="GameCache">
+  <meta name="apple-mobile-web-app-title" content="PlayChest">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="icon" type="image/svg+xml" href="icons/meeple.svg">
@@ -32,7 +32,7 @@
   <div class="offline-banner" id="offlineBanner">You are offline. Browsing the cached collection.</div>
   <button type="button" class="reload-banner" id="reloadBanner" hidden>Collection updated. Click to reload.</button>
   <header class="search">
-    <img class="logo" src="icons/meeple.svg" alt="Red meeple logo" height="36" width="36">
+    <img class="logo" src="icons/meeple.svg" alt="PlayChest" height="36" width="36">
     <div class="search-box" id="search-box"></div>
     <div class="toolbar" id="toolbar">
       <button type="button" class="toolbar-btn" id="random-game-btn" title="Pick a random game">
@@ -42,6 +42,10 @@
       <button type="button" class="toolbar-btn" id="tonight-btn" title="What should we play tonight?">
         <span class="material-symbols-rounded icon-medium">nightlife</span>
         <span class="toolbar-label">Tonight</span>
+      </button>
+      <button type="button" class="toolbar-btn" id="nightsBtn" title="Saved nights">
+        <span class="material-symbols-rounded icon-medium">bookmark</span>
+        <span class="toolbar-label">Nights</span>
       </button>
       <button type="button" class="toolbar-btn" id="stats-btn" title="Collection statistics">
         <span class="material-symbols-rounded icon-medium">bar_chart</span>
@@ -115,6 +119,12 @@
     <details class="game-card" data-color="">
       <summary class="game-summary">
         <img src="" alt="" class="game-image">
+        <div class="expansionStack" hidden></div>
+        <span class="expansionMatchBadge" hidden>Expansion match</span>
+        <div class="gameSummaryMeta">
+          <span class="gameSummaryName"></span>
+          <span class="gameSummaryExpansions"></span>
+        </div>
       </summary>
       <div class="game-details">
         <div class="card-header">
@@ -160,7 +170,7 @@
         </div>
 
         <div class="expansions-section" style="display: none;">
-          <h2>Expansions</h2>
+          <h2>In this box</h2>
           <div class="expansion-chips"></div>
         </div>
 

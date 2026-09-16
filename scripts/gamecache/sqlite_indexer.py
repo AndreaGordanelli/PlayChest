@@ -53,7 +53,8 @@ class SqliteIndexer:
                 collection_owners TEXT,  -- JSON array of BGG usernames
                 previous_players TEXT,  -- JSON array
                 expansions TEXT,  -- JSON array
-                color TEXT       -- Changed from colors to color (singular)
+                color TEXT,       -- Changed from colors to color (singular)
+                is_expansion INTEGER
             )
         ''')
 
@@ -144,8 +145,8 @@ class SqliteIndexer:
                     id, name, description, categories, mechanics, players,
                     weight, playing_time, min_age, rank, usersrated, numowned,
                     rating, numplays, image, tags, collection_owners,
-                    previous_players, expansions, color
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    previous_players, expansions, color, is_expansion
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 game.get('id'), game.get('name'), game.get('description'), categories_json, mechanics_json,
                 players_json,
@@ -158,7 +159,8 @@ class SqliteIndexer:
                 float(game.get('rating')) if game.get('rating') is not None else None,
                 game.get('numplays'), game.get('image'), tags_json, collection_owners_json,
                 previous_players_json,
-                expansions_json, color_str
+                expansions_json, color_str,
+                1 if game.get('is_expansion') else 0
             ))
         conn.commit()
         conn.close()

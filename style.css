@@ -1414,3 +1414,141 @@ html.is-compare-mode .game-card.is-compare-selected .game-image {
         margin-top: 0.35em;
     }
 }
+
+.gameSummaryMeta {
+    display: none;
+    min-width: 0;
+}
+
+.expansionStack {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+}
+
+.expansionStack[hidden],
+.expansionMatchBadge[hidden] {
+    display: none;
+}
+
+.expansionStackThumb {
+    width: 22px;
+    height: 22px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid var(--colorOnAccent);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+    margin-left: -8px;
+}
+
+.expansionStackThumb:first-child {
+    margin-left: 0;
+}
+
+.expansionStackCount {
+    margin-left: 4px;
+    background: rgba(15, 20, 25, 0.85);
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 999px;
+}
+
+.expansionMatchBadge {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    background: var(--colorAccent);
+    color: var(--colorOnAccent);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 999px;
+}
+
+.game-card.is-expansion .game-image {
+    outline: 2px dashed var(--colorAccent);
+}
+
+.game-grid.view-list .game-card::after {
+    display: none;
+    content: none;
+}
+
+.game-grid.view-list .game-summary {
+    width: 100%;
+    height: auto;
+    min-height: 90px;
+    justify-content: flex-start;
+    gap: 0.75em;
+    padding: 0;
+}
+
+.game-grid.view-list .game-image {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.game-grid.view-list .gameSummaryMeta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2em;
+}
+
+.game-grid.view-list .gameSummaryName {
+    font-weight: 600;
+    color: var(--colorTextStrong);
+}
+
+.game-grid.view-list .gameSummaryExpansions {
+    color: var(--colorTextMuted);
+    font-size: 0.85em;
+}
+
+.game-grid.view-list .expansionStack {
+    display: none;
+}
+
+.game-grid.view-compact .expansionStackThumb {
+    display: none;
+}
+
+.savedNightsList {
+    list-style: none;
+    margin: 0 0 1em;
+    padding: 0;
+    display: grid;
+    gap: 0.5em;
+}
+
+.savedNightItem {
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+}
+
+.savedNightItem .savedNightApplyBtn {
+    flex: 1;
+}
+
+.savedNightsForm {
+    display: flex;
+    gap: 0.5em;
+    flex-wrap: wrap;
+}
+
+.savedNightsForm input {
+    flex: 1;
+    min-width: 12em;
+    padding: 0.55em 0.7em;
+    border: 1px solid var(--colorBorder);
+    border-radius: 6px;
+    background: var(--colorSurface);
+    color: inherit;
+}

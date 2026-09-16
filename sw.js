@@ -1,4 +1,4 @@
-const cacheVersion = 'gamecache-v4';
+const cacheVersion = 'playchest-v2';
 const shellCacheName = `${cacheVersion}-shell`;
 const dataCacheName = `${cacheVersion}-data`;
 const imageCacheName = `${cacheVersion}-images`;
@@ -145,6 +145,11 @@ self.addEventListener('fetch', (event) => {
 
   if (isDatabaseRequest(url)) {
     event.respondWith(networkFirst(request, dataCacheName));
+    return;
+  }
+
+  if (url.origin === self.location.origin && /\.(js|css|html|webmanifest)$/i.test(url.pathname)) {
+    event.respondWith(networkFirst(request, shellCacheName));
     return;
   }
 

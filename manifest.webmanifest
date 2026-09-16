@@ -1,6 +1,6 @@
 {
-  "name": "GameCache",
-  "short_name": "GameCache",
+  "name": "PlayChest",
+  "short_name": "PlayChest",
   "description": "Browse and filter your BoardGameGeek collection, including offline.",
   "start_url": "./",
   "scope": "./",

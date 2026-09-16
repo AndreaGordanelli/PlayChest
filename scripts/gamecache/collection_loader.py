@@ -72,12 +72,32 @@ def get_bgg_usernames(
     return [name for name in usernames if name.lower() not in disabled]
 
 
+def _mergeBoardGame(existing: BoardGame, incoming: BoardGame) -> None:
+    for owner in incoming.collection_owners:
+        if owner not in existing.collection_owners:
+            existing.collection_owners.append(owner)
+    existing.tags = sorted(set(existing.tags + incoming.tags))
+    existing.numplays = max(existing.numplays, incoming.numplays)
+    if incoming.numplays >= existing.numplays:
+        existing.previous_players = sorted(
+            set(existing.previous_players + incoming.previous_players)
+        )
+    incomingParents = getattr(incoming, "expansion_parent_ids", None) or []
+    existingParents = getattr(existing, "expansion_parent_ids", None) or []
+    for parentId in incomingParents:
+        if parentId not in existingParents:
+            existingParents.append(parentId)
+    if existingParents:
+        existing.expansion_parent_ids = existingParents
+
+
 def load_merged_collection(downloader, user_names: List[str], extra_params) -> List[BoardGame]:
     merged_games: Dict[int, BoardGame] = {}
+    merged_expansions: Dict[int, BoardGame] = {}
 
     for user_name in user_names:
         try:
-            games = downloader.collection(
+            games, expansions = downloader.collection(
                 user_name=user_name,
                 extra_params=extra_params,
             )
@@ -87,18 +107,28 @@ def load_merged_collection(downloader, user_names: List[str], extra_params) -> L
             ) from error
         for game in games:
             if game.id in merged_games:
-                existing = merged_games[game.id]
-                for owner in game.collection_owners:
-                    if owner not in existing.collection_owners:
-                        existing.collection_owners.append(owner)
-                existing.tags = sorted(set(existing.tags + game.tags))
-                existing.numplays = max(existing.numplays, game.numplays)
-                if game.numplays >= existing.numplays:
-                    existing.previous_players = sorted(
-                        set(existing.previous_players + game.previous_players)
-                    )
+                _mergeBoardGame(merged_games[game.id], game)
             else:
-                game.collection_owners = [user_name]
                 merged_games[game.id] = game
+        for expansion in expansions:
+            if expansion.id in merged_expansions:
+                _mergeBoardGame(merged_expansions[expansion.id], expansion)
+            else:
+                merged_expansions[expansion.id] = expansion
+
+    for game in merged_games.values():
+        game.expansions = []
+
+    for expansion in merged_expansions.values():
+        parentIds = getattr(expansion, "expansion_parent_ids", None) or []
+        attached = False
+        for parentId in parentIds:
+            parent = merged_games.get(parentId)
+            if not parent:
+                continue
+            if expansion.id not in [item.id for item in parent.expansions]:
+                parent.expansions.append(expansion)
+            attached = True
+        # Keep expansions nested under a parent. Never add DLC/expansions as their own cards.
 
     return list(merged_games.values())

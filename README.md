@@ -1,7 +1,7 @@
-# GameCache — Personal fork
+# PlayChest
 
-> **This repository is a fork of [EmilStenstrom/gamecache](https://github.com/EmilStenstrom/gamecache).**
-> The original project targeted GitHub Pages; this fork is **self-hosted with Docker** and adds new features incrementally.
+> **A self-hosted fork of [EmilStenstrom/gamecache](https://github.com/EmilStenstrom/gamecache).**
+> The original project targeted GitHub Pages; this fork runs in Docker and is named PlayChest.
 
 Features land whenever they are ready and tested (there is no fixed release cadence). Check the [roadmap](#roadmap) for what is already available and what is coming next.
 
@@ -29,6 +29,8 @@ Build a searchable, filterable site for your BoardGameGeek collection: download 
 - [x] Dark theme
 - [x] PWA / offline browsing
 - [x] Side-by-side game comparison
+- [x] Saved nights (named filter presets)
+- [x] Expansions grouped under the base game
 
 ### Coming next
 
@@ -110,7 +112,16 @@ Set `0` to disable scheduled updates.
 - Dark theme (manual toggle, with system preference as the default)
 - Installable PWA with offline browsing of the cached collection
 - Side-by-side game comparison
+- Saved nights and expansion grouping
 - Admin and health checks
+
+### Saved nights
+
+Open **Nights** in the toolbar, name the current filters, and save. Apply a night later to restore that search, player count, weight, and the rest. Example names: “2 players”, “fillers”, “heavy weekend”. Nights are stored in the browser and on the server (`/api/nights`).
+
+### Expansions
+
+Owned expansions sit under their base game instead of appearing as separate covers. Household collections merge expansions even when different people own the base and the expansion. Search still finds an expansion by name and highlights the parent. Expansions without an owned parent stay in the box list of a related game when possible and are not shown as their own cards.
 
 ### Multi-collection
 
@@ -129,7 +140,7 @@ You can also add or remove BGG usernames from `/admin.html` without restarting D
 
 ### Dark theme
 
-Use the sun/moon button in the toolbar. The choice is stored in the browser. If you have never picked a theme, GameCache follows `prefers-color-scheme`.
+Use the sun/moon button in the toolbar. The choice is stored in the browser. If you have never picked a theme, PlayChest follows `prefers-color-scheme`.
 
 ### PWA / offline
 
@@ -139,7 +150,7 @@ The site can be installed as an app (Add to Home Screen / Install). After the fi
 - The SQLite collection database
 - Game cover images as you browse (and prefetches them in the background)
 
-You can then open and filter the collection without a network connection. Sync, notes upload, and BGG links still need connectivity.
+You can then open and filter the collection without a network connection. Sync, notes upload, nights, and BGG links still need connectivity.
 
 ### Admin and health
 
@@ -149,6 +160,7 @@ You can then open and filter the collection without a network connection. Sync, 
 | `GET /ready` | Database ready |
 | `GET /api/status` | Sync status |
 | `POST /api/sync` | Manual sync |
+| `GET`/`PUT /api/nights` | Saved nights |
 | `/admin.html` | Admin UI |
 
 ## Local development (without Docker)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple script to check if the GameCache website is working properly.
+Simple script to check if the PlayChest website is working properly.
 """
 
 import argparse
@@ -16,7 +16,7 @@ from gamecache.http_client import make_http_request  # noqa: E402
 
 
 def check_website(base_url="http://localhost:8080"):
-    """Check if the GameCache website is accessible and working"""
+    """Check if the PlayChest website is accessible and working"""
     website_url = base_url.rstrip("/")
 
     print(f"🔍 Checking website: {website_url}")
@@ -25,8 +25,8 @@ def check_website(base_url="http://localhost:8080"):
         response = make_http_request(website_url, timeout=10)
         response_text = response.decode('utf-8', errors='ignore')
 
-        if "gamecache" not in response_text.lower() and "boardgame" not in response_text.lower():
-            print("⚠️  Website is accessible but doesn't look like GameCache")
+        if "playchest" not in response_text.lower() and "boardgame" not in response_text.lower() and "gamecache" not in response_text.lower():
+            print("⚠️  Website is accessible but doesn't look like PlayChest")
             return False
 
         database_url = f"{website_url}/gamecache.sqlite.gz"
@@ -50,7 +50,7 @@ def check_website(base_url="http://localhost:8080"):
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(description="Check whether the GameCache site is reachable.")
+    parser = argparse.ArgumentParser(description="Check whether the PlayChest site is reachable.")
     parser.add_argument(
         "--url",
         default="http://localhost:8080",
@@ -61,14 +61,14 @@ def parse_args(argv=None):
 
 def main(argv=None):
     args = parse_args(argv)
-    print("🌐 Checking GameCache website status...\n")
+    print("🌐 Checking PlayChest website status...\n")
 
     success = check_website(args.url)
 
     print("\n" + "=" * 50)
 
     if success:
-        print("🎉 Your GameCache website appears to be working!")
+        print("🎉 Your PlayChest website appears to be working!")
     else:
         print("❌ Website check failed - see issues above")
         sys.exit(1)

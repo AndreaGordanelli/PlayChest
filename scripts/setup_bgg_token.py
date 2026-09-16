@@ -208,7 +208,7 @@ def save_token_to_config(token, config_path="config.ini"):
 
 def main():
     """Main function to orchestrate the token setup process."""
-    print("BGG Token Setup for GameCache")
+    print("BGG Token Setup for PlayChest")
     print("-" * 70)
 
     # Get username from config.ini
@@ -236,7 +236,7 @@ def main():
     print("="*70)
     print()
     print("Your BGG token has been configured successfully.")
-    print("You can now use GameCache to download and index BGG data.")
+    print("You can now use PlayChest to download and index BGG data.")
     print()
 
 

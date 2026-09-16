@@ -54,28 +54,27 @@ class Downloader():
         games_data = list(filter(lambda x: x["type"] == "boardgame", game_list_data))
         expansions_data = list(filter(lambda x: x["type"] == "boardgameexpansion", game_list_data))
 
-        game_id_to_expansion = {game["id"]: [] for game in games_data}
-        for expansion_data in expansions_data:
-            for expansion in expansion_data["expansions"]:
-                if expansion["inbound"] and expansion["id"] in game_id_to_expansion:
-                    game_id_to_expansion[expansion["id"]].append(expansion_data)
-
-        games = [
-            BoardGame(
+        def makeGame(game_data, expansions=None):
+            return BoardGame(
                 game_data,
-                image=game_id_to_image[game_data["id"]],
-                tags=game_id_to_tags[game_data["id"]],
-                numplays=game_id_to_numplays[game_data["id"]],
-                previous_players=game_id_to_players[game_data["id"]],
+                image=game_id_to_image.get(game_data["id"]) or game_data.get("image") or "",
+                tags=game_id_to_tags.get(game_data["id"], []),
+                numplays=game_id_to_numplays.get(game_data["id"], 0),
+                previous_players=game_id_to_players.get(game_data["id"], []),
                 collection_owners=[user_name],
-                expansions=[
-                    BoardGame(
-                        expansion_data,
-                        image=game_id_to_image.get(expansion_data["id"]) or expansion_data.get("image") or "",
-                    )
-                    for expansion_data in game_id_to_expansion[game_data["id"]]
-                ]
+                expansions=expansions or [],
             )
-            for game_data in games_data
-        ]
-        return games
+
+        games = [makeGame(game_data) for game_data in games_data]
+        baseIds = {game["id"] for game in games_data}
+        expansions = []
+        for expansion_data in expansions_data:
+            expansion = makeGame(expansion_data)
+            expansion.expansion_parent_ids = [
+                link["id"]
+                for link in expansion_data.get("expansions") or []
+                if link.get("id") and (link.get("inbound") or link.get("id") in baseIds)
+            ]
+            expansions.append(expansion)
+
+        return games, expansions
