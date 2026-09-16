@@ -148,8 +148,11 @@ def main(args):
     os.remove(sqlite_path)
     print(f"Created gzipped database: {gzip_path}")
 
-    # Upload to GitHub if not disabled
-    if not args.no_upload:
+    # Upload to GitHub only when explicitly requested
+    if args.upload:
+        if "github" not in SETTINGS or not SETTINGS["github"].get("repo"):
+            print("Error: github_repo must be set in config.ini when using --upload")
+            sys.exit(1)
         try:
             github_manager = setup_github_integration(SETTINGS)
 
@@ -164,7 +167,7 @@ def main(args):
             print(f"Error uploading to GitHub: {e}")
             sys.exit(1)
     else:
-        print("Skipped GitHub upload.")
+        print(f"Database saved locally: {gzip_path}")
 
 
 if __name__ == '__main__':
@@ -174,12 +177,17 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Download and create SQLite database of boardgames')
     parser.add_argument(
-        '--no_upload',
+        '--upload',
         action='store_true',
         help=(
-            "Skip uploading to GitHub. This is useful during development"
-            ", when you want to test the SQLite creation without uploading."
+            "Upload the generated database to GitHub Releases. "
+            "Requires github_repo in config.ini."
         )
+    )
+    parser.add_argument(
+        '--no_upload',
+        action='store_true',
+        help="Deprecated alias kept for compatibility; upload is disabled by default."
     )
     parser.add_argument(
         '--cache_bgg',

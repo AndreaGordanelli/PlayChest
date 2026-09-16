@@ -1,0 +1,19 @@
+services:
+  gamecache:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.ini:/app/config.ini:ro
+      - gamecacheData:/app/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      GAMECACHE_SKIP_UPDATE_CHECK: "1"
+      GAMECACHE_UPDATE_INTERVAL: "${GAMECACHE_UPDATE_INTERVAL:-3600}"
+      GAMECACHE_BGG_TOKEN: "${GAMECACHE_BGG_TOKEN:-}"
+    restart: unless-stopped
+
+volumes:
+  gamecacheData:

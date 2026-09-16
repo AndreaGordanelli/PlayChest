@@ -98,9 +98,6 @@ function loadINI(path, callback) {
         games_per_page: config.games_per_page,
         bgg: {
           username: config.bgg_username
-        },
-        github: {
-          repo: config.github_repo,
         }
       };
 
@@ -115,16 +112,12 @@ async function initializeDatabase(settings) {
       locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
     });
 
-    const isDev = /^(localhost|127\\.0\\.0\\.1)$/.test(location.hostname);
-    // Use existing CORS proxy host
-    const dbUrl = isDev ? './gamecache.sqlite.gz' :
-      `https://cors-proxy.mybgg.workers.dev/${settings.github.repo}`;
+    const dbUrl = './gamecache.sqlite.gz';
 
     console.log(`Loading database from: ${dbUrl}`);
 
     let response = await fetch(dbUrl);
-    if (!response.ok && isDev) {
-      // In development, fall back to the legacy local artifact name
+    if (!response.ok) {
       const legacyDbUrl = './mybgg.sqlite.gz';
       console.warn(`Primary database URL failed (${dbUrl}), trying legacy local file: ${legacyDbUrl}`);
       response = await fetch(legacyDbUrl);
@@ -151,10 +144,10 @@ async function initializeDatabase(settings) {
 
     if (error.message.includes('404') || error.message.includes('Failed to fetch')) {
       userMessage += 'This usually means:\n\n' +
-        '• You haven\'t run the setup script yet (python scripts/download_and_index.py --cache_bgg)\n' +
-        '• The database upload failed\n' +
-        '• GitHub Pages isn\'t enabled or is still setting up (can take 10-15 minutes)\n\n' +
-        'Try running the script again, and make sure GitHub Pages is enabled in your repository settings.';
+        '• The database has not been generated yet\n' +
+        '• Run: python scripts/download_and_index.py --cache_bgg\n' +
+        '• Or start Docker and wait for the initial sync to finish\n\n' +
+        'If you use Docker, check container logs for indexing errors.';
     } else if (error.message.includes('gzip')) {
       userMessage += 'The database file appears to be corrupted. Try running the setup script again.';
     } else {

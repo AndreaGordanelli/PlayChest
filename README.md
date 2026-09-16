@@ -1,12 +1,6 @@
 # GameCache - View and filter your boardgame collection
 
-> [!WARNING]
-> Project renamed: This project was previously called "MyBGG" and is now "GameCache". Existing deployments using the old name continue to work (asset names and the CORS proxy remain compatible), but new forks should use the new name and paths shown below.
-
-
-_This repository is published as a **GitHub Template**. Create your own copy via "Use this template" (recommended) rather than forking. The canonical upstream lives at: https://github.com/EmilStenstrom/gamecache_
-
-Create a beautiful, searchable website for your BoardGameGeek collection! This project downloads your games from BoardGameGeek, creates a database, and automatically hosts it as a website using GitHub Pages.
+Create a beautiful, searchable website for your BoardGameGeek collection. GameCache downloads your games from BoardGameGeek, builds a local SQLite database, and serves the site with Docker.
 
 ![Site preview](gamecache-preview.png)
 
@@ -14,403 +8,149 @@ Create a beautiful, searchable website for your BoardGameGeek collection! This p
 - A searchable website based on your board game collection from BoardGameGeek
 - Automatic filtering by players, time, weight, categories, and more
 - Rich game details from BoardGameGeek (ratings, descriptions, mechanics, and more)
-- Free online hosting based off your GitHub account
+- Self-hosted deployment with Docker
 
 ## Quick Start Checklist
 
-- [ ] **Create a new public repository from this template** (green "Use this template" button → "Create a new repository")
-- [ ] **Edit config.ini** with your BGG and GitHub usernames (required before next step!)
-- [ ] **Get BGG token**: `python scripts/setup_bgg_token.py` (reads username from config.ini)
-- [ ] **Enable GitHub Pages** in your repository settings
-- [ ] **Install Python dependencies**: `pip install -r scripts/requirements.txt`
-- [ ] **Validate setup**: `python scripts/validate_setup.py`
-- [ ] **Generate database**: `python scripts/download_and_index.py --cache_bgg`
-- [ ] **Visit your site**: `https://YOUR_USERNAME.github.io/gamecache`
-- [ ] **Enable hourly updates** (optional): `python scripts/enable_hourly_updates.py`
-
-💡 **New to this?** Follow the detailed instructions below.
-
-> **Note about BGG tokens**: BGG is transitioning to requiring API tokens. Run the setup_bgg_token.py script to generate a valid token!
+- [ ] **Edit config.ini** with your BGG username and site title
+- [ ] **Get BGG token**: `python scripts/setup_bgg_token.py`
+- [ ] **Start with Docker**: `docker compose up --build`
+- [ ] **Visit your site**: `http://localhost:8080`
 
 ## Requirements
 
-* [GitHub](https://github.com) account (free). We will store and share your database using GitHub Releases.
-* [BoardGameGeek](https://boardgamegeek.com) account (free). We will fetch all your games and game metadata from here.
-* Computer with Python 3.8-3.12 installed.
-   <details>
-      <summary>Using a newer Python version?</summary>
-      This project is tested with Python versions up to 3.12. If you are using a newer version (like 3.13+), you may need to regenerate the dependencies file. After installing `pip-tools` (`pip install pip-tools`), run the following command:
-      ```bash
-      pip-compile scripts/requirements.in -o scripts/requirements.txt
-      ```
-      Then, proceed with the installation command in step 4.
-   </details>
+* [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+* [BoardGameGeek](https://boardgamegeek.com) account (free)
+* For local development without Docker: Python 3.8-3.12
 
-## Getting started
+> **Note about BGG tokens**: BGG requires API tokens. Run `python scripts/setup_bgg_token.py` to generate one.
 
-1. **Create a public repository from this template.**
-   <details>
-      <summary>Details</summary>
-   On the repository page click the green **Use this template** button → **Create a new repository**. Pick a name (you can keep `gamecache` or choose something else). Make sure you make the repository **public**, or else you will have to pay to use GitHub Pages. Leave **Include all branches** unchecked. Click **Create repository**. You now have your own independent copy of gamecache.
-   </details>
+## Docker Setup
 
-2. **Update the config.ini file** with your details:
+1. **Configure the project**
 
-   **Easy way (recommended)**: Edit directly on GitHub:
-   * Go to the repository you just created on GitHub
-   * Click on `config.ini`
-   * Click the pencil icon (✏️) to edit
-   * Replace `YOUR_NAME` with your name (for the website title)
-   * Replace `YOUR_BGG_USERNAME` with your BoardGameGeek username  
-   * Replace `YOUR_GITHUB_USERNAME` with your GitHub username
-   * Scroll down and click **"Commit changes"**
+   Edit `config.ini`:
 
-   **Example**: If your name is John, BGG username is `johnsmith`, and GitHub username is `johnsmith123`:
    ```ini
-   # GameCache Configuration
-   # Edit the values below with your information
-
    title = "John's boardgames"
    bgg_username = johnsmith
-   github_repo = johnsmith123/gamecache
    ```
 
-   ⚠️ **Important**: Make sure your config is valid! Common mistakes:
-   - Missing `=` between key and value
-   - For values with apostrophes or spaces, use quotes: `title = "John's boardgames"`
-
-   **How to find your BGG username**: It's in your BoardGameGeek profile URL. For example, if your profile is `https://boardgamegeek.com/user/johnsmith`, your username is `johnsmith`.
-
-   <details>
-      <summary>Alternative: Edit on your computer</summary>
-
-      * Clone your new project: `git clone https://github.com/YOUR_USERNAME/REPO_NAME.git`
-      * Edit the `config.ini` file
-      * Commit and push your changes:
-      ```bash
-      git add config.ini
-      git commit -m "Update config.ini with my details"
-      git push
-      ```
-   </details>
-
-3. **Get a BGG Application Token**:
-
-   To access BoardGameGeek's API, you need an application token. GameCache provides a fully automated setup:
+2. **Create your BGG token**
 
    ```bash
    python scripts/setup_bgg_token.py
    ```
 
-   <details>
-      <summary>What happens during token setup</summary>
+   This creates a local `.env` file with `GAMECACHE_BGG_TOKEN`.
 
-      **Process**:
-      * The script reads your BGG username from `config.ini` (make sure you edited it first!)
-      * It automatically generates a token for you using GameCache's shared BGG application
-      * The token is saved securely to a `.env` file (not committed to git)
-      * **No manual application registration needed** - everything is handled automatically!
+3. **Build and run**
 
-      **Important notes**:
-      * Please use the API responsibly - rate limiting is shared across all GameCache users
-      * The token is stored in `.env` as `GAMECACHE_BGG_TOKEN` (kept private)
+   ```bash
+   docker compose up --build
+   ```
 
-      **Success indicators**:
-      * You'll see "✅ Token generated successfully!"
-      * You'll see "✅ Token saved to .env"
-      * A `.env` file is created in your project root (not committed to git)
+   On first start, the container downloads your collection from BoardGameGeek and builds `gamecache.sqlite.gz`. This can take several minutes depending on collection size.
 
-      **If the automated setup fails**: Contact the GameCache maintainer or file an issue on GitHub
-   </details>
+4. **Open the site**
 
-4. **Enable GitHub Pages** to host your website:
-   <details>
-      <summary>Step-by-step instructions</summary>
+   Visit [http://localhost:8080](http://localhost:8080)
 
-      * Go to your repository on GitHub
-      * Click the **Settings** tab (at the top of your repository page)
-      * Scroll down to **Pages** in the left sidebar and click it
-      * Under "Source", select **Deploy from a branch**
-      * Under "Branch", choose **master**
-      * Leave the folder as **/ (root)**
-      * Click **Save**
+### Automatic updates
 
-      **Verification**: You should see a green checkmark and a message like "Your site is published at https://YOUR_USERNAME.github.io/gamecache". This might take a few minutes to appear.
+By default, Docker Compose refreshes the database every hour. To change the interval, set `GAMECACHE_UPDATE_INTERVAL` in seconds:
 
-      ⏰ **Note**: GitHub Pages can take 5-10 minutes to activate. Your website will be available at: `https://YOUR_USERNAME.github.io/gamecache` (after you generate your database in step 6)
-   </details>
+```bash
+GAMECACHE_UPDATE_INTERVAL=7200 docker compose up --build
+```
 
-5. **Install the required Python libraries**:
+Set it to `0` to disable scheduled updates.
+
+### Docker files
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Python indexer + nginx web server |
+| `docker-compose.yml` | Local deployment with persistent database volume |
+| `docker/nginx.conf` | Static site and database serving |
+| `docker/entrypoint.sh` | Initial sync, scheduled refresh, startup |
+
+## Local Development (without Docker)
+
+1. Install dependencies:
+
    ```bash
    pip install -r scripts/requirements.txt
    ```
 
-   <details>
-      <summary>Python installation help</summary>
+2. Validate setup:
 
-      **If you don't have Python installed:**
-      * Download Python 3.12+ from https://python.org
-      * During installation, make sure to check "Add Python to PATH"
-      * Restart your terminal/command prompt after installing
-
-      **If the command above doesn't work, try:**
-      * `pip3 install -r scripts/requirements.txt`
-      * `python -m pip install -r scripts/requirements.txt`
-      * `python3 -m pip install -r scripts/requirements.txt`
-
-      **Verification**: You should see messages about packages being installed successfully. If you see "Successfully installed..." at the end, you're good to go!
-   </details>
-
-6. **Validate your setup** (optional but recommended):
    ```bash
    python scripts/validate_setup.py
    ```
 
-   This checks that your config.ini is valid, your BGG username exists, and all Python dependencies are installed. If everything looks good, proceed to step 7!
+3. Build the database:
 
-7. **Generate your database**:
    ```bash
-   python scripts/download_and_index.py
+   python scripts/download_and_index.py --cache_bgg
    ```
 
-   <details>
-      <summary>What to expect</summary>
+4. Serve the site:
 
-      **⏰ Time**: First run takes 5-15 minutes depending on your collection size  
-      **🔍 Process**: The script will:
-      1. Download all your games from BoardGameGeek (this is the slow part)
-      2. Create a SQLite database with your games and their metadata
-      3. Compress it to save space
-      4. Ask you to authenticate with GitHub (opens browser)
-      5. Upload it as a GitHub release
+   ```bash
+   python -m http.server 8080
+   ```
 
-      **GitHub Authentication** (happens during step 4):
-      * The script will print a URL and a device code
-      * Your browser will open to GitHub
-      * Enter the device code when prompted
-      * Sign in to your GitHub account
-      * Click "Authorize" to give permission
-      * Return to your terminal - the upload will continue automatically
+5. Open [http://localhost:8080](http://localhost:8080)
 
-      **Success indicators**:
-      * You'll see "Imported X games and Y expansions from boardgamegeek"
-      * You'll see "Created SQLite database with X games and Y expansions"
-      * You'll see "Successfully uploaded to GitHub: [URL]"
-      * Your website will be available at: `https://YOUR_USERNAME.github.io/gamecache`
-   </details>
+## Configuration
 
-## 🔄 Enable Automatic Hourly Updates (Optional)
+`config.ini` supports:
 
-Want your website to stay up-to-date automatically? You can enable hourly updates that will sync your collection from BoardGameGeek every hour without any manual work!
-
-**Requirements**: You must complete the Getting Started steps above first.
-
-**To enable hourly updates**:
-```bash
-python scripts/enable_hourly_updates.py
+```ini
+title = "Your site title"
+bgg_username = your_bgg_username
 ```
 
-<details>
-   <summary>How it works</summary>
+Optional legacy GitHub upload settings:
 
-   **What this does**:
-   * Sets up GitHub Actions to run automatically every hour
-   * Downloads your latest collection from BoardGameGeek  
-   * Updates your website with any new games, ratings, or plays
-   * Completely automated - no manual work required
+```ini
+github_repo = owner/repo
+```
 
-   **What to expect**:
-   * The script extracts your GitHub authentication token from your local setup
-   * Creates a secure repository secret for GitHub Actions to use
-   * Enables the hourly workflow that's already configured in your repository
+If you add `github_repo`, you can upload the database to GitHub Releases with:
 
-   **Privacy & Security**:
-   * Your authentication token is stored securely as a GitHub repository secret
-   * Only your repository's automated workflows can access it
-   * The token has minimal permissions (only access to create releases)
-
-   **After setup**:
-   * Check the "Actions" tab in your GitHub repository to see the hourly runs
-   * Your website will automatically reflect any changes to your BGG collection
-   * Updates happen every hour on the hour (e.g., 1:00 PM, 2:00 PM, etc.)
-</details>
-
-## What to Expect
-
-**First-time setup**: 15-30 minutes total
-- Steps 1-4: 5-10 minutes (mostly waiting for downloads)
-- Step 5 (validation): 30 seconds
-- Step 6 (database generation): 5-15 minutes (depends on collection size)
-- GitHub Pages activation: 5-15 minutes (happens automatically in background)
-
-**Collection sizes and timing**:
-- Small collection (< 50 games): 1-3 minutes
-- Medium collection (50-200 games): 3-5 minutes  
-- Large collection (200+ games): 5-10 minutes
-
-**What the script downloads**:
-- Basic game information (name, year, players, etc.)
-- Detailed metadata (categories, mechanics, descriptions)
-- Ratings and rankings from BGG
-- Game images (thumbnails)
-- Your personal data (ratings, plays, comments)
+```bash
+python scripts/download_and_index.py --upload --cache_bgg
+```
 
 ## Troubleshooting
 
-### Common Setup Issues
+**Website shows "Loading database..." forever**
+- Wait for the first Docker sync to finish and check container logs
+- Or run `python scripts/download_and_index.py --cache_bgg` locally
 
-**"No games imported" error**:
-- Check that your BGG username in `config.ini` is correct (spelling and casing)
-- Make sure your BoardGameGeek collection is set to public ([BGG Collection Settings](https://boardgamegeek.com/collection/settings))
-- Verify you have games marked as "owned" in your BGG collection
-- Try the validation script: `python scripts/validate_setup.py`
+**BGG token errors**
+- Run `python scripts/setup_bgg_token.py` again
+- Ensure `.env` contains `GAMECACHE_BGG_TOKEN=...`
 
-**"pip not found" or "python not found"**:
-- Make sure Python 3.8+ is installed from https://python.org
-- On Windows: Make sure "Add Python to PATH" was checked during installation
-- Try alternatives: `python3` instead of `python`, `pip3` instead of `pip`
-- On Windows: Try `py -m pip install -r scripts/requirements.txt`
+**No games imported**
+- Verify your BGG username in `config.ini`
+- Make sure your BGG collection is public and games are marked as owned
 
-**GitHub authentication fails**:
-- Make sure you're logged into GitHub in your browser
-- Check your internet connection
-- Clear your browser cache and try again
-- Make sure popup blockers aren't preventing the GitHub page from opening
-- If you see `CERTIFICATE_VERIFY_FAILED`, reinstall dependencies with `pip install -r scripts/requirements.txt`
-- If `CERTIFICATE_VERIFY_FAILED` continues after reinstalling, your machine may be missing a root certificate or intercepting HTTPS traffic (proxy/antivirus)
-
-**BGG token generation fails**:
-- Check your internet connection
-- Verify your BGG username is correct (no spaces, special characters)
-- If the automated token generator is temporarily unavailable, please file an issue on GitHub or contact the maintainer
-
-**"Authorization" errors when downloading from BGG**:
-- Make sure you ran `python scripts/setup_bgg_token.py` first
-- Check that `.env` file exists with `GAMECACHE_BGG_TOKEN=...`
-- Make sure the environment variable is exported: `export GAMECACHE_BGG_TOKEN=$(grep GAMECACHE_BGG_TOKEN .env | cut -d= -f2)`
-- Try regenerating your token by running the setup script again
-
-**Website shows "Loading database..." forever**:
-- **Most common**: GitHub Pages isn't enabled yet → Go to Settings → Pages and enable it
-- **Second most common**: Script hasn't been run yet → Run `python scripts/download_and_index.py --cache_bgg`
-- Wait 10-15 minutes after enabling GitHub Pages (it takes time to activate)
-- Check that the script said "Successfully uploaded to GitHub" when you ran it
-- Try accessing your site in an incognito/private browser window (clears cache)
-
-**Invalid configuration syntax**:
-- Make sure each line follows the format: `key = value`
-- For values with apostrophes or spaces, use quotes: `title = "John's boardgames"`
-- Check that there are no extra spaces around the `=` sign
-- Comments should start with `#`
-- If syntax highlighting looks broken, make sure apostrophes are inside quotes
-
-### Less Common Issues
-
-**Script runs but no games appear on website**:
-- Check your BGG collection privacy settings (must be public)
-- Make sure games are marked as "owned" in your BGG collection
-- Try running without `--cache_bgg` to get fresh data: `python scripts/download_and_index.py`
-
-**"Failed to fetch database" error on website**:
-- The script upload might have failed - check for "Successfully uploaded" message
-- GitHub releases might not be working - check your repository's Releases tab
-- Try running the script again
-
-**Website loads but search/filtering doesn't work**:
-- Check browser console for JavaScript errors (F12 → Console tab)
-- Try refreshing the page or clearing browser cache
-- Make sure JavaScript is enabled in your browser
-
-## Using your website
-
-Once you've generated your database, you'll have a working website for browsing and searching your board game collection. The website:
-
-* **Loads your data**: Fetches the SQLite database from your GitHub releases
-* **Provides search**: Real-time search and filtering of your games
-* **Shows game details**: Rich information from BoardGameGeek including ratings, descriptions, mechanics, etc.
-
-To view your website:
-- Go to: `https://YOUR_USERNAME.github.io/gamecache`
-- Or view it locally by running `python -m http.server` and opening `http://localhost:8000`
-
-## Working with the site locally (optional)
-
-You can also run the website locally on your computer:
-
-1. Start a local web server:
-   ```bash
-   python -m http.server
-   ```
-
-2. Open your browser to `http://localhost:8000`
-
-This is useful for testing changes to the website before pushing them to GitHub.
-
-## Updating your database
-
-To update your database with new games or changed ratings:
-
-1. Run the script again:
-   ```bash
-   python scripts/download_and_index.py
-   ```
-
-2. A new release will be created automatically with the updated database
-
-3. Your website will automatically use the new database (may take a few minutes)
-
-## Advanced usage
-
-* **Skip GitHub upload** (for testing): Add `--no_upload` flag
-* **Enable debug logging**: Add `--debug` flag  
-* **Use custom config file**: Add `--config path/to/config.ini`
-
-## Keeping Your Copy Updated
-
-Because you created your repository from a **template** (not a fork), GitHub will NOT show the built‑in "Sync fork" button. Updating is still easy:
-
-1. (First time) **Add upstream remote**:
-   ```bash
-   git remote add upstream https://github.com/EmilStenstrom/gamecache.git
-   ```
-2. **Fetch upstream**:
-   ```bash
-   git fetch upstream
-   git merge upstream/master
-   ```
-3. **Merge or rebase** the main branch (pick one style and stick with it):
-   ```bash
-   git checkout main
-   git merge upstream/main   # keeps explicit merge commits
-   # or
-   git rebase upstream/main  # linear history
-   ```
-4. **Resolve any conflicts**, update dependencies if needed, then:
-   ```bash
-   pip install -r scripts/requirements.txt
-   git push
-   ```
-
-### Watching for Upstream Changes
-Star or watch the upstream repo to get notified of releases. Release notes will summarize noteworthy changes (schema, flags, etc.).
-
-### Updating after the rename
-
-If your fork predates the rename, or you see errors like:
-
-```
-remote: Repository not found.
-fatal: repository 'https://github.com/EmilStenstrom/mybgg.git/' not found
-```
-
-Update your `upstream` to the new URL and pull the latest changes:
+**Check the running site**
 
 ```bash
-git remote set-url upstream https://github.com/EmilStenstrom/gamecache.git
-git fetch upstream
-git checkout master
-git merge upstream/master
+python scripts/check_website.py --url http://localhost:8080
 ```
+
+## Updating your database manually
+
+```bash
+python scripts/download_and_index.py --cache_bgg
+```
+
+With Docker running, restart the container or wait for the next scheduled refresh.
 
 ## Credits
 
