@@ -1767,6 +1767,32 @@ function renderGameCard(game) {
       : '';
   }
 
+  card.style.setProperty('--game-rgb', game.color || '128, 128, 128');
+
+  const summaryInfo = clone.querySelector('.gameSummaryInfo');
+  if (summaryInfo) {
+    const infoParts = [];
+    const playersShort = formatPlayerCountShort(game.players || []);
+    if (playersShort) infoParts.push(['group', playersShort.replace('-', '–')]);
+    const shortTime = { '< 30min': '<30m', '30min - 1h': '30–60m', '> 4h': '4h+' };
+    if (game.playing_time) {
+      infoParts.push(['schedule', shortTime[game.playing_time] || game.playing_time.replace(/\s*-\s*/g, '–')]);
+    }
+    const weightName = getComplexityName(game.weight);
+    const shortWeight = { 'Light Medium': 'Light+', 'Medium Heavy': 'Medium+' };
+    if (weightName) infoParts.push(['fitness_center', shortWeight[weightName] || weightName]);
+    summaryInfo.innerHTML = infoParts
+      .map(([icon, text]) => `<span class="gameInfoItem"><span class="material-symbols-rounded" aria-hidden="true">${icon}</span>${escapeHtml(String(text))}</span>`)
+      .join('');
+  }
+
+  const ratingBadge = clone.querySelector('.gameRatingBadge');
+  if (ratingBadge && game.rating) {
+    ratingBadge.hidden = false;
+    ratingBadge.textContent = Number(game.rating).toFixed(1);
+    ratingBadge.title = `BGG rating ${Number(game.rating).toFixed(2)}`;
+  }
+
   const expansionStack = clone.querySelector('.expansionStack');
   if (expansionStack && expansionCount) {
     expansionStack.hidden = false;
@@ -2169,6 +2195,14 @@ function getTextColorForBg(rgbColor) {
 }
 
 function positionPopupInViewport(popup, trigger, clickEvent = null) {
+  // The redesigned details view is a fixed dialog / bottom sheet placed by CSS.
+  if (getComputedStyle(popup).position === 'fixed') {
+    popup.style.left = '';
+    popup.style.top = '';
+    popup.style.height = '';
+    popup.style.overflowY = '';
+    return;
+  }
   const triggerRect = trigger.getBoundingClientRect();
   const viewportWidth = document.documentElement.clientWidth;
   const viewportHeight = window.innerHeight;
