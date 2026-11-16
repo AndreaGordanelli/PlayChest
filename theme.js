@@ -11,7 +11,7 @@
     document.documentElement.dataset.theme = theme;
     const meta = document.getElementById('themeColorMeta');
     if (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#14110f' : '#b42318');
+      meta.setAttribute('content', theme === 'dark' ? '#16130f' : '#f7f2ea');
     }
     const toggle = document.getElementById('themeToggle');
     if (toggle) {

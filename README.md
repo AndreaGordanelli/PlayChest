@@ -103,6 +103,9 @@ Set `0` to disable scheduled updates.
 
 ## Current features
 
+- Quick player-count and playing-time chips in the header; everything else lives under **More filters**
+- Phone layout with a bottom action bar (Pick for us, Both of us, Nights, Compare, Stats) and bottom-sheet game details
+- Keyboard: `/` focuses search, `Esc` closes the open game, sheet, or dialog
 - Random game picker
 - Shareable URLs (search, filters, sort, view)
 - Collection statistics and a “never played” shortcut
