@@ -1,4 +1,4 @@
-const cacheVersion = 'playchest-v10';
+const cacheVersion = 'playchest-v11';
 const shellCacheName = `${cacheVersion}-shell`;
 const dataCacheName = `${cacheVersion}-data`;
 const imageCacheName = `${cacheVersion}-images`;
@@ -9,6 +9,7 @@ const appShell = [
   './style.css',
   './app-sqlite.js',
   './features.js',
+  './ui.js',
   './theme.js',
   './admin.html',
   './admin.js',
